@@ -7,9 +7,9 @@ on-demand skills, a layer-2 kit of 26 project skills in four modules, the
 mechanisms that enforce what must not be skipped, and where work is recorded
 so it can be resumed and learned from.
 
-Start with `architecture/kien-truc-tong-hop.html` (in Vietnamese; open it in a
-browser after cloning): the whole design, from the three layers down to each
-file, with examples.
+Start with `architecture/overview.html` (open it in a browser after
+cloning): the whole design, from the three layers down to each file, with
+examples.
 
 ```
 ~/.claude/                          LAYER 1 · global, every task
@@ -195,8 +195,8 @@ touch ~/.claude/lessons.md
 
 | Path | What |
 |---|---|
-| `architecture/kien-truc-tong-hop.html` | the whole design: layers, 8 steps, 4 gates, task files and where they live, learning loop, mechanisms with what was tested, examples, status |
-| `architecture/kien-truc-3-lop.html` | SDLC and STLC matrices across the three layers |
+| `architecture/overview.html` | the whole design: layers, 8 steps, 4 gates, task files and where they live, learning loop, mechanisms with what was tested, examples, status |
+| `architecture/three-layers.html` | SDLC and STLC matrices across the three layers |
 | `prompts/` | workflow.md, communication.md, places.md, message-shapes.md (read on demand, not imported) |
 | `skills/` | task-spec, verify-work, review-work, retro, project-init, parallel-agents |
 | `agents/reviewer.md` | reviewer subagent |

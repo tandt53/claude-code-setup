@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture of working with Claude</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F5F6F8; --panel: #FFFFFF; --ink: #1B2233; --muted: #5E6880; --line: #D5DAE3;
+    --l1: #2F6FB3; --l1-bg: #EAF2FB;
+    --l2: #2E8A63; --l2-bg: #E7F5EE;
+    --l3: #9A5B12; --l3-bg: #FBF1E3;
+    --gate: #C0392B; --new: #7A3FB0; --accent: #C98410; --mech: #36506E; --mech-bg: #EEF1F5;
+    --sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+      --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A; --l3: #E3A95C; --l3-bg: #33261A;
+      --gate: #F07A6C; --new: #C39AF0; --accent: #F0B44C; --mech: #A9BCD6; --mech-bg: #212A38;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+    --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A; --l3: #E3A95C; --l3-bg: #33261A;
+    --gate: #F07A6C; --new: #C39AF0; --accent: #F0B44C; --mech: #A9BCD6; --mech-bg: #212A38;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); padding-inline: 16px; padding-block: 28px 72px; }
+  .wrap { max-width: 1080px; margin-inline: auto; display: grid; gap: 56px; }
+  h1 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 8px; text-wrap: balance; }
+  h2 { font-size: 1.35rem; margin: 0; text-wrap: balance; }
+  h3 { font-size: 1.05rem; margin: 0; }
+  p { margin: 0; max-width: 70ch; }
+  .lead { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  section { display: grid; gap: 18px; scroll-margin-top: 16px; }
+  .wrap > *, section > *, .sub > *, .two > *, .hl > *, .flow > *, .split > * { min-width: 0; }
+  .sub { display: grid; gap: 12px; }
+  .eyebrow { font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  nav.toc a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 5px 10px; font-size: .88rem; }
+  nav.toc a:hover { border-color: var(--muted); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .badge { display: inline-block; font-size: .68rem; font-weight: 700; border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; letter-spacing: .02em; font-family: var(--sans); }
+  .b-new { color: var(--new); border: 1px solid var(--new); }
+  .b-ren { color: var(--l1); border: 1px solid var(--l1); }
+  .b-has { color: var(--l2); border: 1px solid var(--l2); }
+  .gate { color: var(--gate); font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .85rem; color: var(--muted); }
+
+  /* ---------- high level ---------- */
+  .hl { display: grid; grid-template-columns: 1fr 250px; gap: 16px; align-items: stretch; }
+  @media (max-width: 760px) { .hl { grid-template-columns: 1fr; } }
+  .layers { display: grid; gap: 8px; }
+  .layer { border: 1.5px solid; border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; }
+  .layer .name { font-weight: 700; }
+  .layer .where { font-family: var(--mono); font-size: .76rem; color: var(--muted); }
+  .layer .what { font-size: .9rem; }
+  .L1 { border-color: var(--l1); background: var(--l1-bg); } .L1 .name { color: var(--l1); }
+  .L2 { border-color: var(--l2); background: var(--l2-bg); } .L2 .name { color: var(--l2); }
+  .L3 { border-color: var(--l3); background: var(--l3-bg); } .L3 .name { color: var(--l3); }
+  .between { text-align: center; font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+  .principle { border: 1.5px solid var(--mech); background: var(--mech-bg); border-radius: 6px; padding: 14px; display: grid; gap: 10px; align-content: start; }
+  .principle .q { font-weight: 700; font-size: 1rem; line-height: 1.35; }
+  .principle .row { font-size: .86rem; }
+  .principle .row b { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--mech); }
+
+  .purposes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 760px) { .purposes { grid-template-columns: 1fr 1fr; } }
+  .purpose { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 4px; padding: 10px 12px; font-size: .88rem; display: grid; gap: 4px; align-content: start; }
+  .purpose .k { font-weight: 700; }
+  .purpose .f { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+
+  /* ---------- phases ---------- */
+  .phases { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); overflow: hidden; }
+  .phase { display: grid; grid-template-columns: 44px 140px 1fr 1fr; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); align-items: start; font-size: .88rem; }
+  .phase:last-child { border-bottom: none; }
+  .phase .n { font-family: var(--mono); font-weight: 700; color: var(--l1); font-size: 1.05rem; }
+  .phase .t { font-weight: 700; }
+  .phase .t small { display: block; font-weight: 400; color: var(--muted); font-size: .78rem; }
+  .phase .lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); display: block; }
+  .phase.head { background: var(--bg); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding-block: 8px; }
+  @media (max-width: 760px) {
+    .phase { grid-template-columns: 36px 1fr; }
+    .phase > :nth-child(3), .phase > :nth-child(4) { grid-column: 2; }
+    .phase.head { display: none; }
+  }
+
+  /* ---------- frame ---------- */
+  .frame { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 760px) { .frame { grid-template-columns: 1fr 1fr; } }
+  .fq { background: var(--l1-bg); border: 1.5px solid var(--l1); border-radius: 6px; padding: 10px 12px; font-size: .86rem; }
+  .fq b { display: block; color: var(--l1); }
+  .down { text-align: center; color: var(--muted); font-family: var(--mono); }
+  .paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+  .path { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; font-size: .86rem; display: grid; gap: 4px; }
+  .path b { font-size: .92rem; }
+
+  /* ---------- generic cards/tables ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; font-size: .88rem; }
+  .card h4 { margin: 0; font-size: .95rem; }
+  .card ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+  .card.l1 { border-left: 4px solid var(--l1); }
+  .card.l2 { border-left: 4px solid var(--l2); }
+  .card.l3 { border-left: 4px solid var(--l3); }
+  .card.mech { border-left: 4px solid var(--mech); }
+  .tablebox { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; background: var(--panel); border: 1px solid var(--line); font-size: .87rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; background: var(--bg); }
+  pre { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; font-family: var(--mono); font-size: .8rem; line-height: 1.5; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  .cap { font-size: .8rem; color: var(--muted); margin-bottom: 4px; }
+
+  /* ---------- flow ---------- */
+  .flow { display: grid; gap: 6px; }
+  .fn { border: 1.5px solid var(--line); background: var(--panel); border-radius: 6px; padding: 9px 13px; font-size: .88rem; }
+  .fn.l1 { border-color: var(--l1); background: var(--l1-bg); }
+  .fn.l2 { border-color: var(--l2); background: var(--l2-bg); }
+  .fn.l3 { border-color: var(--l3); background: var(--l3-bg); }
+  .fn.mech { border-color: var(--mech); background: var(--mech-bg); }
+  .fa { color: var(--muted); font-family: var(--mono); font-size: .8rem; padding-left: 16px; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: 10px 14px; font-size: .9rem; }
+  .note b { display: block; margin-bottom: 2px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Overview · updated 1 Nov 2026</div>
+  <h1>Architecture of working with Claude</h1>
+  <p class="lead">From the overview down to each layer. Layer 1 is the shared frame for every task. Layer 2 is the part specific to software development (SDLC, STLC). Layer 3 is the files that live in the repo.</p>
+  <div class="legend" style="margin-top:10px">
+    <span><span class="badge b-has">BUILT</span> already in the <code>claude-code-setup</code> package</span>
+    <span><span class="badge b-new">NEW</span> proposed, not built (no items left now)</span>
+    <span><span class="gate">◀</span> approver</span>
+  </div>
+  <nav class="toc">
+    <a href="#overview">1. Overview</a>
+    <a href="#layer1">2. Layer 1 · Global</a>
+    <a href="#layer2">3. Layer 2 · Project</a>
+    <a href="#layer3">4. Layer 3 · Artifact</a>
+    <a href="#example">5. End-to-end example</a>
+    <a href="#status">6. Status</a>
+  </nav>
+</header>
+
+<!-- =================================================== 1 -->
+<section id="overview">
+  <div class="eyebrow">Part 1</div>
+  <h2>Architecture overview</h2>
+
+  <div class="hl">
+    <div class="layers">
+      <div class="layer L1">
+        <div class="name">Layer 1 · Global: how we work</div>
+        <div class="where">~/.claude/ · used for every task, every project</div>
+        <div class="what">8-step workflow, 4 gates · split a large request into a map and slices · how to write · where files go · shared skills (contract, verification (including mutation), review, retro, running agents in parallel, probing a web app in a real browser) · enforcement mechanisms · lessons about how Claude works</div>
+      </div>
+      <div class="between">▲ a project reuses layer 1 and does not change it</div>
+      <div class="layer L2">
+        <div class="name">Layer 2 · Project: domain expertise</div>
+        <div class="where">repo/CLAUDE.md · repo/.claude/ · CI</div>
+        <div class="what">For software: a kit of 26 skills in 4 modules (shared · dev · qa · ops), installed by project-init as needed · CI and trace-check · lessons about the domain</div>
+      </div>
+      <div class="between">▲ creates and reads</div>
+      <div class="layer L3">
+        <div class="name">Layer 3 · Artifact: memory that lives in the repo</div>
+        <div class="where">repo/docs/product/ · repo/.work/ · tests/ · defaults, a project can change them</div>
+        <div class="what">product: requirement · test case · ADR · test · changelog <br>work: spec · task status · test plan · incident · lessons</div>
+      </div>
+    </div>
+    <div class="principle">
+      <div class="q">Instructions for judgment; mechanisms for enforcement.</div>
+      <div class="row"><b>Instructions (prompt, skill)</b>for work that needs judgment: framing a task, explaining, review, deciding</div>
+      <div class="row"><b>Mechanisms (hook, CI, Plan mode)</b>for work that must not be skipped: approval before code, tests must run, a requirement must have tests</div>
+      <div class="row"><b>Limit</b>A mechanism can only enforce what a machine can check. Each mechanism is trusted only after it has been seen to block once.</div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>The life of a task: 8 steps, the same for every task</h3>
+<pre>① Frame ─→ ② Context ─→ ③ Agree ─→ ④ Plan ─→ ⑤ Do ─→ ⑥ Verify ─→ ⑦ Review ─→ ⑧ Learn
+                        ◀ G1       ◀ G2      ◀ G3                ◀
+                        G4: file   map when  one line per step,
+                                   many      no stop
+                                   slices
+     ▲                                                                         │
+     └───── lessons promoted to a rule or check, used by later tasks ──────────┘</pre>
+    <p class="lead">What each step contains changes with the purpose of the task (deliver, learn, restore, decide), but the frame does not. The 4 gates decide where to stop (2.4). The size of a request decides only one thing: whether to split it into several slices (2.5). Each slice goes through all 8 steps.</p>
+  </div>
+
+  <div class="sub">
+    <h3>Four purposes of keeping records</h3>
+    <div class="purposes">
+      <div class="purpose"><span class="k">Define</span>What "correct" is, before the work<span class="f">spec.md · requirement</span></div>
+      <div class="purpose"><span class="k">Record</span>State and decisions, to resume and to check again<span class="f">spec.md · commit · PR</span></div>
+      <div class="purpose"><span class="k">Block</span>No reporting done without evidence<span class="f">status.json · hook · CI</span></div>
+      <div class="purpose"><span class="k">Learn</span>A surprise seen a second time becomes a rule or a check<span class="f">lessons.md</span></div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- =================================================== 2 -->
+<section id="layer1">
+  <div class="eyebrow">Part 2</div>
+  <h2>Layer 1 · Global: how we work, for every task</h2>
+  <p class="lead">Applies to writing code, writing documents, research, making video, data analysis. Nothing in this layer assumes the task is software, except the Stop hook (see 2.8). The workflow is only a guide: it names no path, file or skill. Paths live in <code>places.md</code>, and a skill is called by what it does.</p>
+
+  <!-- 2.1 -->
+  <div class="sub">
+    <h3>2.1 Components</h3>
+    <div class="cards">
+      <div class="card l1">
+        <h4>Always loaded</h4>
+        <ul>
+          <li><code>workflow.md</code> <span class="badge b-has">BUILT</span><br><small>hard rules · 8 steps · 4 gates · failure branches · context. No paths, no skill names</small></li>
+          <li><code>communication.md</code> <span class="badge b-has">BUILT</span><br><small>how to write · the default picture is a before → after line · shapes for report, plan, map, brief, spec, review, lesson · reply codes <code>ok</code>, <code>Q2 b</code></small></li>
+          <li><code>places.md</code> <span class="badge b-has">BUILT</span><br><small>default place of each file · a project can override it (2.6)</small></li>
+        </ul>
+      </div>
+      <div class="card l1">
+        <h4>Skills, loaded on demand</h4>
+        <ul>
+          <li><code>task-spec</code> <span class="badge b-has">BUILT</span> the contract, when work runs past one session or "correct" is unclear</li>
+          <li><code>verify-work</code> <span class="badge b-has">BUILT</span> independent verification</li>
+          <li><code>review-work</code> <span class="badge b-has">BUILT</span> review by 4 questions</li>
+          <li><code>retro</code> <span class="badge b-has">BUILT</span> a surprise → lessons</li>
+          <li><code>project-init</code> <span class="badge b-has">BUILT</span> probe, then install layer 2 into a repo</li>
+          <li><code>parallel-agents</code> <span class="badge b-has">BUILT</span> split a large job among agents running in parallel, one folder per agent</li>
+        </ul>
+      </div>
+      <div class="card mech">
+        <h4>Enforcement mechanisms</h4>
+        <ul>
+          <li>Plan mode <span class="badge b-has">BUILT</span> approval gate</li>
+          <li>subagent <code>reviewer</code> <span class="badge b-has">BUILT</span> fresh context</li>
+          <li>Stop hook <span class="badge b-has">BUILT</span> tests must run <small>(really part of layer 2)</small></li>
+          <li>deny <code>.env*</code> <span class="badge b-has">BUILT</span> secrets stay out of context</li>
+          <li>attribution off <span class="badge b-has">BUILT</span> no Claude line in commits and PRs</li>
+          <li><code>trace.py</code> <span class="badge b-has">BUILT</span> the package's static check (2.8)</li>
+        </ul>
+      </div>
+      <div class="card l3">
+        <h4>Global memory</h4>
+        <ul>
+          <li><code>~/.claude/lessons.md</code> <span class="badge b-has">BUILT</span><br><small>lessons about how Claude works, not loaded every session, found by tag</small></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2.2 -->
+  <div class="sub">
+    <h3>2.2 Eight steps</h3>
+    <div class="phases">
+      <div class="phase head"><span>#</span><span>Step</span><span>What to do</span><span>Components · Output</span></div>
+      <div class="phase"><span class="n">①</span><span class="t">Frame<small>frame the task</small></span><span>Answer the 4 questions (2.3). Done silently, spoken aloud only when the purpose is not Deliver</span><span><span class="lbl">uses</span>workflow: Frame the task<span class="lbl">outputs</span>how to work</span></div>
+      <div class="phase"><span class="n">②</span><span class="t">Context<small>gather</small></span><span>Wide → rank by risk → deep along the data flow → wide again at each point. Search lessons by tag</span><span><span class="lbl">uses</span>workflow: Gathering context · lessons<span class="lbl">outputs</span>a map, seen / not seen</span></div>
+      <div class="phase"><span class="n">③</span><span class="t">Agree<small>agree on "correct"</small> <span class="gate">◀</span></span><span>Write the acceptance examples first. <b>G1</b>: if a value the user would see came from you, show the examples (<code>assumed</code>) and wait. A value you set that the user does not see: decide it yourself and put it in the report. <b>G4</b>: past one session, the spec becomes a file. If "correct" is unclear, find a reference to check against</span><span><span class="lbl">uses</span>spec skill · Spec shape<span class="lbl">outputs</span>examples · <code>spec.md</code> on G4</span></div>
+      <div class="phase"><span class="n">④</span><span class="t">Plan<small>split into steps</small> <span class="gate">◀</span></span><span>One logical change per step, riskiest first, code works after every step. <b>G2</b>: more than one commit means the plan waits for approval. Several deliverables, more than 3 steps, or several requests in one message become a map, approved once (2.5)</span><span><span class="lbl">uses</span>Plan mode · Plan and Map shapes<span class="lbl">outputs</span>plan · <code>map.md</code></span></div>
+      <div class="phase"><span class="n">⑤</span><span class="t">Do<small>carry out</small> <span class="gate">◀</span></span><span>Each step: test from the examples, see it fail, then code. The test must go red for the reason it guards; if the fix was written before the test, revert the fix, see it red, then restore it. <b>G3</b>: before a step that is hard to undo, say what it breaks and ask, even when the request was explicit. With a plan, report one line per step and move on, no stop</span><span><span class="lbl">uses</span>Stop hook · mutation check skill<span class="lbl">outputs</span>result · one commit per change</span></div>
+      <div class="phase"><span class="n">⑥</span><span class="t">Verify<small>prove</small></span><span>On G1 or G2: evidence, not assertion. Check against the approved examples. Check the checks. A report that can be read after the context is forgotten</span><span><span class="lbl">uses</span>verify skill · Report of finished work shape<span class="lbl">outputs</span>evidence · <code>[unverified]</code> · report</span></div>
+      <div class="phase"><span class="n">⑦</span><span class="t">Review<small>independent</small> <span class="gate">◀</span></span><span>After the last step of planned work (G2), or when asked. Fresh context, sees only the result and the reference, asked to refute it</span><span><span class="lbl">uses</span>review skill · subagent <code>reviewer</code><span class="lbl">outputs</span>Review findings shape</span></div>
+      <div class="phase"><span class="n">⑧</span><span class="t">Learn<small>learn</small></span><span>When there is a surprise (corrected, a check fails, the plan had to change), after an incident, or when asked. Seen a second time, it is promoted to a check</span><span><span class="lbl">uses</span>retro skill<span class="lbl">outputs</span><code>lessons.md</code> · new check</span></div>
+    </div>
+  </div>
+
+  <!-- 2.3 -->
+  <div class="sub">
+    <h3>2.3 Frame: four questions decide how to work</h3>
+    <div class="frame">
+      <div class="fq"><b>1. Purpose?</b>deliver a change · learn something · restore · reach a decision</div>
+      <div class="fq"><b>2. What is "correct"?</b>known (examples) · findable (a reference) · judged by the viewer · none</div>
+      <div class="fq"><b>3. What if it is wrong?</b>reversible or not · wide or narrow impact</div>
+      <div class="fq"><b>4. Who approves?</b>you are present · you are absent</div>
+    </div>
+    <div class="down">▼ leads to</div>
+    <div class="paths">
+      <div class="path"><b>Deliver</b>gated by the cost of a mistake, not by the amount of code: 4 gates decide where to stop (2.4) · a large request is split into slices (2.5)</div>
+      <div class="path"><b>Learn</b>time-boxed · output is an answer + evidence · throwaway code needs no tests</div>
+      <div class="path"><b>Restore</b>reduce damage with a reversible action → hypothesis, experiment, elimination → the root fix goes through Deliver</div>
+      <div class="path"><b>Decide</b>brief the options (Asking for a decision shape) → decision record</div>
+      <div class="path"><b>Judged by the viewer</b>show a draft early, fix from feedback</div>
+      <div class="path"><b>Irreversible</b>dry run on a copy · backup · rollback plan → <span class="gate">◀ ask before that step</span></div>
+      <div class="path"><b>No one to approve</b>do only what is reversible, stop before the rest, leave a report</div>
+    </div>
+  </div>
+
+  <!-- 2.4 -->
+  <div class="sub">
+    <h3>2.4 Four gates: where to stop</h3>
+    <p class="lead">They replace the Small/Medium/Large table. Each gate is a yes/no question, asked at the right step. Each "yes" adds one stop or one file. If every answer is "no", do the work and report.</p>
+    <div class="frame">
+      <div class="fq"><b>G1 · at ③ Agree</b>Write the acceptance examples first. Is any value the user would see (label, format, message, default) set by Claude, not coming from the request, the code or you? → show the examples, mark them <code>assumed</code> <span class="gate">◀ wait</span> · a value you set that the user does not see: decide it yourself, write <code>[decided]</code></div>
+      <div class="fq"><b>G2 · at ④ Plan</b>Does it need more than one logical change, so more than one commit? → plan, one change per step <span class="gate">◀ approve</span> · several deliverables, more than 3 steps, or several requests in one message? → a map of slices <span class="gate">◀ approve the map once</span> (2.5)</div>
+      <div class="fq"><b>G3 · before every step</b>Is the next step hard to undo: API, data model, stored data, security, migration, anything published? → say what it breaks, ask how to roll it out, even when the request was explicit <span class="gate">◀ ask</span></div>
+      <div class="fq"><b>G4 · at ③ Agree</b>Will the work outlive this session, or run while no one is watching? → the spec becomes a file</div>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Gate answered "yes"</th><th>What it adds at later steps</th></tr></thead>
+        <tbody>
+          <tr><td>G1 or G2</td><td>⑥ Verify with the verify skill</td></tr>
+          <tr><td>G2</td><td>⑤ one line per step, no stop · ⑦ Review after the last step</td></tr>
+          <tr><td>G2 gives a map</td><td>each slice goes through all 8 steps and has its own report · a slice stops only on G1 or G3</td></tr>
+          <tr><td>a surprise</td><td>⑧ Learn with the retro skill</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>When to stop</th><th>When to go on</th></tr></thead>
+        <tbody>
+          <tr><td>G1: a value you set that the user would see</td><td>a value you set that the user does not see: decide it yourself, write <code>[decided]</code></td></tr>
+          <tr><td>G2: plan or map waits for approval, once</td><td>after each step, after each slice: report one line</td></tr>
+          <tr><td>G3: a step that is hard to undo</td><td>work that is reversible and that no one sees</td></tr>
+          <tr><td>the plan is wrong, the work goes outside the map, two fixes still fail</td><td>a check fails but the plan is still right: fix and re-run</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>Why it changed (1 Nov).</b>You still had to approve every step. Three rules caused most of the stops: stop after each step, G1 waits on any <code>assumed</code> value, and one question per message. Now G1 stops only for values the user would see, each step reports one line and moves on, questions are batched at one approval point, and every question comes with a recommendation. The 25 Oct lesson keeps G1 at this level: the temporary-password format sat among 22 examples and was rejected only after the code was written. Not yet measured on real tasks.</div>
+    <div class="note"><b>Why the table was dropped, and what was measured (11 Oct).</b>A task has several independent properties; the table forces one label and does not say which row wins when several match. Claude was asked to classify 8 tasks, 5 times each: the old table gave the same label on 5/8 tasks, the 4 gates gave the same combination on 6/8 tasks and the same gate answers on 30/32 answers. Real behaviour, asking before changing a public API field: old table 5/6, first version of the gates 7/12, strict G3 11/12. Renaming an internal variable across 4 files: both versions just did it, 3/3.</div>
+  </div>
+
+  <!-- 2.5 -->
+  <div class="sub">
+    <h3>2.5 Large requests: map and slice</h3>
+    <p class="lead">Before, one large request became one large spec, which led to a large plan and a large diff, so it was very hard to review. Now a large request is split into several <b>slices</b>. Each slice has one behaviour the user can see, at most 3 steps, and goes through its own 8 steps. The <b>map</b> keeps each slice's place in the whole system.</p>
+    <div class="flow">
+      <div class="fn">Request: several deliverables, or more than 3 steps, or several requests in one message</div>
+      <div class="fa">▼ ① Frame · ② Context</div>
+      <div class="fn l1"><code>map.md</code>: one line per slice · dependencies · what it touches (module, REQ) · what it does not touch · questions Q1… with recommendations</div>
+      <div class="fa"><span class="gate">◀ you approve once, answer <code>ok</code> or <code>Q1 b</code></span></div>
+      <div class="split">
+        <div class="fn l1">S1: spec · ≤3 steps · verify · review · 1 line report</div>
+        <div class="fn l1">S2 … Sn: same as S1, in dependency order</div>
+      </div>
+      <div class="fa">▼ a slice stops only when: a user-visible value must be set by Claude (G1) · a step is hard to undo (G3) · the work goes outside the map · two fixes still fail</div>
+      <div class="fn">final report: <code>DONE · S1 ✓ S2 ✓ S3 ✓</code>, about 8 lines</div>
+    </div>
+    <div class="two">
+      <div>
+        <div class="cap"><code>map.md</code>: the Map shape in communication <span class="badge b-has">BUILT</span></div>
+<pre># Map: &lt;request&gt;        S1 ✓ S2 ▶ S3 S4
+- S1 &lt;one result the user sees&gt; · after: —
+     · touches: &lt;module, REQ&gt;
+- S3 &lt;…&gt; · after: S1 · touches: &lt;…&gt;
+     · hard to undo: &lt;what&gt;
+Untouched: &lt;things that look changed but are not&gt;
+Decide first:
+- Q1 &lt;question&gt; · a &lt;…&gt; · b &lt;…&gt; · rec: a</pre>
+      </div>
+      <div>
+        <div class="cap">Level of detail by tier</div>
+<pre>map        high-level logic: what the user gets,
+           order, dependencies
+           → you read it closely, approve
+spec slice each branch: condition → result,
+           real values
+           → you read it only when the slice asks
+           (G1) or when you want to look
+## In the map   map · slice before, after ·
+                must not break anything</pre>
+      </div>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>You read</th><th>You answer</th></tr></thead>
+        <tbody>
+          <tr><td>First line of every report: <code>DONE</code> nothing for you to do · <code>ASK n</code> n questions right below · <code>BLOCKED</code> with the reason it is blocked</td><td><code>ok</code>: accept every recommendation</td></tr>
+          <tr><td>Behaviour change: 1–3 lines before → after, real values · a diagram only when the flow branches</td><td><code>Q2 b</code>: pick b for question Q2</td></tr>
+          <tr><td>About 8 lines in chat · details live in the spec, commits and PR</td><td><code>S3 drop</code>: remove slice S3 · <code>F2</code>, <code>all</code>: see details</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>One slice, one context.</b>Each slice runs from its own spec file. When the map has more than 3 slices, each slice runs in its own subagent and the main session keeps the map. Slices that touch the same file run in the dependency order written in the map (see <code>parallel-agents</code>).</div>
+  </div>
+
+  <!-- 2.6 -->
+  <div class="sub">
+    <h3>2.6 Task files: when they exist, where, and for what</h3>
+    <p class="lead">Files exist because a task runs across several sessions: the context must survive when the chat is gone. A task finished within one session needs no file.</p>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Case</th><th>Layer 1 file</th><th>Added in layer 2 (software)</th></tr></thead>
+        <tbody>
+          <tr><td>Done within one session</td><td>none · report + commit message</td><td>—</td></tr>
+          <tr><td>G1 "yes", done within one session</td><td>none · the examples are approved right in the chat</td><td>—</td></tr>
+          <tr><td>G4: past one session, or runs while no one is watching</td><td><code>spec.md</code> in the task folder</td><td>spec has a Changes section (REQ) · <code>status.json</code></td></tr>
+          <tr><td>"Correct" is unclear</td><td><code>spec.md</code> records the reference to check against (spec skill)</td><td>—</td></tr>
+          <tr><td>Request split into several slices (2.5)</td><td><code>map.md</code> in a folder with no spec · each slice has its own task folder beside it, with a <code>spec.md</code></td><td>each slice has its own Changes and <code>status.json</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>File</th><th>Purpose</th><th>Written when</th><th>Who writes · who reads</th><th>Protects against</th></tr></thead>
+        <tbody>
+          <tr><td><code>map.md</code> <span class="badge b-has">BUILT</span></td><td>Each slice's place in the whole system</td><td>Before the first slice, updated as each slice finishes</td><td>Claude writes · you approve once</td><td>A bloated spec · slices losing their link to the system</td></tr>
+          <tr><td><code>spec.md</code></td><td>Defines "correct"</td><td>Before the work</td><td>Claude writes · you approve (slice under a map: only on G1)</td><td>Misreading the request</td></tr>
+          <tr><td>commit · PR</td><td>Records what was done, why, and what was rejected</td><td>One commit per change · PR when done</td><td>Claude writes · you approve the PR, a later session reads</td><td>Lost context · silent decisions</td></tr>
+          <tr><td><code>status.json</code> <span class="badge b-has">BUILT</span> <small>layer 2</small></td><td>Block</td><td>After tests run</td><td>A <b>script</b> generates it · Claude only reads</td><td>Claude declaring itself done</td></tr>
+          <tr><td><code>lessons.md</code> <span class="badge b-has">BUILT</span></td><td>Learn</td><td>Retro, when there is a surprise</td><td>Claude writes · found by tag at step ②</td><td>Repeating old mistakes</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div>
+        <div class="cap"><code>spec.md</code>: the Spec shape in communication, generic form</div>
+<pre># &lt;Task name&gt;
+## Goal         what to do, why
+## Scope        In · Out
+## Where        files, modules, related sources
+## In the map   only for a slice: map · before,
+                after · must not break anything
+## What correct means
+  acceptance examples, OR a reference
+  (criteria, old version, properties…)
+## Decisions    settled · reason · rejected
+## Open questions   who decides
+## Done when    one runnable check</pre>
+      </div>
+    </div>
+    <div class="note"><b>No separate log file.</b>A later session continues from the spec, the commits and the PR; for a task with a map, the progress line (<code>S1 ✓ S2 ▶</code>) sits at the top of the map.</div>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Role (places.md)</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td>work folder</td><td><code>.work/</code> at the project root, never in home · with no project, ask</td></tr>
+          <tr><td>task folder · spec</td><td><code>&lt;work folder&gt;/tasks/&lt;date&gt;-&lt;name&gt;/</code> · <code>spec.md</code></td></tr>
+          <tr><td>map</td><td><code>&lt;task folder&gt;/map.md</code> · slices in folders beside it: <code>&lt;date&gt;-&lt;name&gt;-s1/</code>, <code>-s2/</code>…</td></tr>
+          <tr><td>project lessons · personal lessons</td><td><code>&lt;work folder&gt;/lessons.md</code> · <code>~/.claude/lessons.md</code></td></tr>
+          <tr><td>decision records</td><td>the folder the project already has (<code>docs/adr/</code>, <code>docs/decisions/</code>…) · if none, propose <code>docs/decisions/</code> and wait</td></tr>
+          <tr><td>project kit · project instructions</td><td><code>~/.claude/project-kit/</code> · <code>CLAUDE.md</code> or <code>AGENTS.md</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>Places are defaults; a project can change them.</b>The project's <code>CLAUDE.md</code> overrides any role, in its own words: a line <code>Work records: notes/work/</code> sends tasks to <code>notes/work/tasks/</code>. Measured 11 Oct: correct 4/4 times, 2/2 with different wording (<code>planning/</code>), and with no declaration 2/2 went to <code>.work/tasks/</code>. With no decision-record folder yet, Claude proposes one and waits: 8/8.</div>
+  </div>
+
+  <!-- 2.7 -->
+  <div class="sub">
+    <h3>2.7 The learning loop</h3>
+    <p class="lead">It fills the gap in the "Learning from repeats" rule: every session starts with an empty memory, so Claude needs a record that outlives each task to know a mistake has happened before.</p>
+    <div class="flow">
+      <div class="fn l3">spec, commits and PR of each task (raw)</div>
+      <div class="fa">▼ <code>retro</code> <span class="badge b-has">BUILT</span>: keeps only the surprises</div>
+      <div class="fn l1">wrong assumption · plan had to change · reviewer caught a bug · a mutant survived · you had to correct Claude</div>
+      <div class="fa">▼ written to</div>
+      <div class="split">
+        <div class="fn l1"><code>~/.claude/lessons.md</code><br><small>about how Claude works</small></div>
+        <div class="fn l2"><code>.work/lessons.md</code><br><small>about the project's domain and code</small></div>
+      </div>
+      <div class="fa">▼ seen a second time</div>
+      <div class="fn mech">promote: a test · lint · hook, and only last a line in CLAUDE.md. See the new check fail on exactly that mistake before trusting it</div>
+      <div class="fa">▼</div>
+      <div class="fn">the rule or check is loaded in every later task → the loop returns to step ①</div>
+    </div>
+<pre>- 2026-09-30 · coupon-stacking · #money #assumption
+  Wrong assumption: "add the %" was wrong, the PO wants multiply. The PRD does not say.   Count: 1 · watching
+- 2026-10-12 · refund-v2 · #money #assumption
+  Guessed how to combine % again without asking.                                          Count: 2
+  → PROMOTED: requirements must ask for the "% combining formula" for any REQ about money</pre>
+  </div>
+
+  <!-- 2.8 -->
+  <div class="sub">
+    <h3>2.8 Mechanisms: what they enforce, what they cannot</h3>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Mechanism</th><th>Enforces</th><th>Cannot enforce</th><th>Checked</th></tr></thead>
+        <tbody>
+          <tr><td>Plan mode</td><td>No file edits before you approve the plan</td><td>Whether the plan is good · whether Claude enters Plan mode when G2 is "yes"</td><td>Not yet. Manual test on your machine</td></tr>
+          <tr><td>Stop hook</td><td>If code was edited, tests must run after the last edit</td><td>Whether the tests pass or mean anything · edits made through a Bash command · sessions that save no transcript · files outside the git repo (scratchpad, /tmp: deliberately not counted)</td><td>22 tests · 8/8 planted faults caught · 5 Nov: 3 mutations of the "count only files in the repo" rule were all caught · 11 Oct real run after install: created <code>add.js</code>, tried to stop, was blocked, ran the tests, then stopped</td></tr>
+          <tr><td>subagent <code>reviewer</code></td><td>Its own context · no tool to edit files</td><td>Whether it finds the right problem · writing through Bash (only an instruction)</td><td>Called 10/10 times when reviewing (11 Oct). Quality of bug finding: not yet measured with planted bugs</td></tr>
+          <tr><td>deny <code>.env*</code></td><td>Read and recognisable Bash commands (<code>cat</code>, <code>head</code>…) cannot read <code>.env</code></td><td><code>grep -r</code> from a directory · a script that opens the file itself · <code>.env</code> in a parent directory</td><td>11 Oct after install: Read and <code>cat .env</code> were blocked, <code>.env.example</code> could be read</td></tr>
+          <tr><td>attribution off</td><td>Claude Code tells Claude not to add the Co-Authored-By and Generated with lines</td><td>Does not check the commit after it is created · a trailer the person asked for still goes in</td><td>Without the setting 3/3 had the trailer, with the setting 0/3 · after install 2/2 had none</td></tr>
+          <tr><td><code>trace.py</code> (the package's check)</td><td>Every idea in the workflow still has a place · no path outside <code>places.md</code>, no skill name outside frontmatter · cross-references by section name must exist · the workflow has no file names, paths or skill names</td><td>Whether the content is right · it runs only when whoever edits the package runs it</td><td>164/164 (1 Nov) · every planted fault was caught (11 Oct)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><b>The Stop hook really belongs to layer 2.</b>It sits in ~/.claude because it is installed once for every project, but it only means something when there is code and a test. It skips tasks that edit no code by itself, and can be turned off per project with <code>Test command: `none`</code>.</div>
+  </div>
+</section>
+
+<hr>
+
+<!-- =================================================== 3 -->
+<section id="layer2">
+  <div class="eyebrow">Part 3</div>
+  <h2>Layer 2 · Project: the part specific to software development</h2>
+  <p class="lead">Added on top of layer 1, not replacing it. Each project picks the components it needs. A project that is not software (Video Studio, for example) has a completely different layer 2.</p>
+
+  <div class="sub">
+    <h3>3.1 Components</h3>
+    <div class="cards">
+      <div class="card l2">
+        <h4>Conventions (CLAUDE.md)</h4>
+        <ul>
+          <li><code>Test command:</code> · build · lint</li>
+          <li>REQ code convention: <code>REQ-&lt;AREA&gt;-NNN</code></li>
+          <li>Where requirements, specs and test plans are stored</li>
+          <li>fixtures, seeds, test environment</li>
+        </ul>
+      </div>
+      <div class="card l2">
+        <h4>SDLC skills <small>shared + dev modules</small></h4>
+        <ul>
+          <li><code>requirements</code> <span class="badge b-has">BUILT</span> <small>shared with STLC</small> · <code>requirement-review</code> · <code>review-change</code></li>
+          <li><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code></li>
+          <li><code>backend</code> · <code>frontend</code> <small>+ frontend-web / frontend-mobile</small></li>
+          <li><code>design-decision</code> <span class="badge b-has">BUILT</span> <small>when needed</small></li>
+        </ul>
+      </div>
+      <div class="card l2">
+        <h4>STLC + operations skills <small>qa + ops modules</small></h4>
+        <ul>
+          <li><code>qa-foundations</code> <small>common base for QA, does not activate on its own</small></li>
+          <li><code>test-plan</code> · <code>test-design</code> · <code>test-authoring</code> · <code>test-execution</code></li>
+          <li><code>bug-report</code> <span class="badge b-has">BUILT</span> · <code>visual-review</code> · <code>qa-sweep</code> · <code>playwright-cli</code></li>
+          <li><code>release</code> <span class="badge b-has">BUILT</span> · <code>incident</code> <span class="badge b-has">BUILT</span> <small>ops</small></li>
+        </ul>
+      </div>
+      <div class="card mech">
+        <h4>Mechanisms</h4>
+        <ul>
+          <li>CI <code>trace.yml</code> <span class="badge b-has">BUILT</span>: a task in a PR must be proven · plus lint, typecheck, mutation per project</li>
+          <li><code>trace-check</code> <span class="badge b-has">BUILT</span> → generates <code>status.json</code> · <code>--strict</code> blocks examples that are still <code>assumed</code></li>
+          <li>pre-commit · PR template · required checks</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.2 Requirements analysis: the shared node of SDLC and STLC</h3>
+    <div class="flow">
+      <div class="fn">PRD · ticket · talks with the PO</div>
+      <div class="fa">▼ layer 1: ① Frame · ② Context (find conflicts with old REQs, places affected)</div>
+      <div class="fn l2"><b><code>requirements</code></b> <span class="badge b-has">BUILT</span>: two lenses
+        <div class="split" style="margin-top:6px">
+          <div class="fn"><b>SDLC</b>: complete? conflicting? feasible?</div>
+          <div class="fn"><b>STLC</b>: testable? boundaries? conditions?</div>
+        </div>
+      </div>
+      <div class="fa">▼ layer 1: never fill a gap silently → <code>assumed</code> (G1) · batch the questions, each with a recommendation · <code>review-work</code></div>
+      <div class="fa"><span class="gate">◀ PO, dev, QA approve the examples</span></div>
+      <div class="fn l3"><code>docs/product/requirements/&lt;area&gt;.md</code> · REQ-CHECKOUT-012 + examples</div>
+      <div class="split">
+        <div><div class="fa">▼</div><div class="fn l2">SDLC: <code>task-spec</code> refers to the REQ → plan → code</div></div>
+        <div><div class="fa">▼</div><div class="fn l2">STLC: <code>test-plan</code> → <code>test-design</code> from the same examples</div></div>
+      </div>
+      <div class="fa">▼ meet again</div>
+      <div class="fn mech">test passes = requirement met · <code>trace-check</code> proves it</div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.3 SDLC and STLC on top of the 8 steps</h3>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Phase</th><th>Purpose (Frame)</th><th>Layer 1 uses</th><th>Layer 2 adds</th><th>Gate</th></tr></thead>
+        <tbody>
+          <tr><td><b>Requirements</b> = STLC requirements analysis</td><td>Deliver (document)</td><td>Frame · Context · G1 <code>assumed</code> · <code>review-work</code></td><td><code>requirements</code></td><td class="gate">◀ examples</td></tr>
+          <tr><td>Design</td><td>Decide</td><td>brief (Asking for a decision) · decision record</td><td><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>design-decision</code></td><td class="gate">◀ ADR</td></tr>
+          <tr><td>STLC test planning</td><td>Deliver</td><td>Frame question 3 → test level</td><td><code>test-plan</code></td><td class="gate">◀ entry/exit criteria</td></tr>
+          <tr><td>STLC test case design</td><td>Deliver</td><td><code>verify-work</code>: property test · mutation</td><td><code>test-design</code> · <code>test-authoring</code> · <code>qa-foundations</code></td><td>—</td></tr>
+          <tr><td>Code</td><td>Deliver</td><td><code>task-spec</code> on G4 · Plan mode · Stop hook</td><td><code>backend</code> · <code>frontend</code> (web/mobile) · CLAUDE.md: commands</td><td class="gate">◀ plan or map on G2 · ◀ G3</td></tr>
+          <tr><td>STLC execution, bug reports</td><td>Deliver</td><td>evidence rule</td><td><code>test-execution</code> · <code>bug-report</code> · <code>qa-sweep</code> · <code>visual-review</code> · CI</td><td>—</td></tr>
+          <tr><td>Review</td><td>—</td><td><code>review-work</code> · <code>reviewer</code></td><td>PR template</td><td class="gate">◀ PR</td></tr>
+          <tr><td>STLC test closure</td><td>—</td><td>check the checks</td><td><code>trace-check</code> · mutation</td><td class="gate">◀ remaining risk</td></tr>
+          <tr><td>Release</td><td>Irreversible</td><td>dry run · rollback · G3: say what it breaks, ask</td><td><code>release</code></td><td class="gate">◀ before the irreversible step</td></tr>
+          <tr><td>Operations</td><td>Restore · Learn</td><td>reduce damage first · <code>retro</code></td><td><code>incident</code></td><td class="gate">◀ postmortem</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>3.4 The software extension of spec.md</h3>
+<pre>## Changes                        ← added in layer 2, points back to the requirement
+- REQ-CHECKOUT-005 (changed): 1 coupon → at most 2
+- REQ-CHECKOUT-012 (new): with 2 coupons the % multiply
+## What correct means             ← examples tagged with REQ codes
+- REQ-012 ex1: 100,000 VND, 10% + 5% → 85,500 VND
+## Done when                       ← added: requirement updated · status.json clean</pre>
+  </div>
+</section>
+
+<hr>
+
+<!-- =================================================== 4 -->
+<section id="layer3">
+  <div class="eyebrow">Part 4</div>
+  <h2>Layer 3 · Artifact: memory that lives in the repo</h2>
+  <p class="lead">Split by one criterion: does the file describe the <b>system</b> or <b>one piece of work done or in progress</b>.</p>
+
+  <div class="tablebox">
+    <table>
+      <thead><tr><th></th><th>Product artifacts · <code>docs/product/</code></th><th>Work artifacts · <code>.work/</code></th></tr></thead>
+      <tbody>
+        <tr><td>Describes</td><td>The system, in its current state</td><td>One piece of work: why, how, what was learned</td></tr>
+        <tr><td>Updated</td><td>Edited in place, always reflects the present</td><td>Appended to, archived when done</td></tr>
+        <tr><td>Lifecycle</td><td>Follows the system</td><td>Follows the task or event</td></tr>
+        <tr><td>Who reads</td><td>New devs, QA, PO: people who need to understand the system</td><td>Reviewers, people running a retro, people who want to know why</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two">
+<pre>repo/
+├─ CLAUDE.md             conventions · Test command
+│                        · explicit .work/ path
+│
+├─ docs/product/         PRODUCT · edited in place
+│  ├─ requirements/      stable REQ codes + examples
+│  │   └─ checkout.md
+│  ├─ test-cases/        test conditions per REQ
+│  │   └─ checkout.md
+│  ├─ architecture/      overview, diagrams
+│  └─ decisions/         ADR · append, never edit old ones
+├─ tests/                test_REQ_CHECKOUT_012_…
+├─ CHANGELOG.md          product history
+│
+└─ .work/                WORK · append, archive
+   ├─ tasks/             (committed to git)
+   │   ├─ 2026-10-coupon-stacking/
+   │   │   ├─ spec.md       definition
+   │   │   └─ status.json   block · .gitignore
+   │   ├─ 2026-11-enrolment/
+   │   │   └─ map.md        large request · no spec
+   │   ├─ 2026-11-enrolment-s1/
+   │   │   └─ spec.md       slice · ## In the map
+   │   └─ 2026-11-enrolment-s2/ …
+   ├─ test-plans/
+   ├─ incidents/
+   └─ lessons.md         learn · the project's
+
+~/.claude/lessons.md     learn · how Claude works</pre>
+    <div class="flow">
+      <div class="cap">One direction: work changes the product</div>
+      <div class="fn l3"><code>.work/tasks/…/spec.md</code></div>
+      <div class="fa">▼ "Done when"</div>
+      <div class="fn l3"><code>docs/product/requirements/</code> updated</div>
+      <div class="fa">&nbsp;</div>
+      <div class="fn l3"><code>.work/incidents/…</code></div>
+      <div class="fa">▼ postmortem</div>
+      <div class="fn l3"><code>docs/product/requirements/</code> gets an example · <code>tests/</code> gets a test</div>
+      <div class="fa">▼ retro</div>
+      <div class="fn l3"><code>.work/lessons.md</code></div>
+      <div class="note" style="margin-top:6px"><b>The product never refers back to the work.</b>Reading <code>docs/product/</code> shows the current truth, without wading through history. To learn why, go to <code>.work/</code>.</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card l3">
+      <h4><code>.work/</code> is a hidden folder</h4>
+      <p>Ripgrep, the search tool under Claude Code, skips hidden folders by default. CLAUDE.md gives the explicit path (<code>.work/lessons.md</code>) so Claude reads it directly, without depending on search.</p>
+    </div>
+    <div class="card l3">
+      <h4><code>status.json</code> is not committed</h4>
+      <p>It is machine-generated and changes on every test run, so committing it would add noise to diffs. CI regenerates it when needed. Only the final snapshot is kept when the task is archived.</p>
+    </div>
+    <div class="card l3">
+      <h4>ADRs sit on the product side</h4>
+      <p>They come out of work, but they explain why the system is built the way it is and live with the system, so with the layer-2 kit they go in <code>docs/product/decisions/</code>. A repo without the kit uses its existing ADR folder; if there is none, Claude proposes <code>docs/decisions/</code> and waits. Append only, never edit an old ADR: when a new decision replaces one, write a new ADR that points back to the old one.</p>
+    </div>
+    <div class="card l3">
+      <h4>Paths are defaults</h4>
+      <p>The tree above is the default of <code>places.md</code> and of the layer-2 kit. A project can change it in <code>CLAUDE.md</code>. A repo with the layer-2 kit must keep <code>.work/</code>, because the CI <code>trace.yml</code> reads <code>.work/tasks/*/spec.md</code>, only one level deep. That is why a slice sits beside the map's folder rather than nested inside it, and the map's folder has no <code>spec.md</code>, so CI skips it.</p>
+    </div>
+    <div class="card l3">
+      <h4>Not only for software</h4>
+      <p>Video Studio also has two sides. Product: <code>videos/&lt;slug&gt;/storyboard.json</code>, <code>brand/</code>. Work: <code>.work/</code> with a log per video and lessons.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="cap">The REQ thread joins both sides</div>
+    <div class="split">
+      <div class="flow">
+        <div class="fn l3">product: requirement REQ-CHECKOUT-012</div>
+        <div class="fn l3">product: test-cases · tests test_REQ_CHECKOUT_012_…</div>
+        <div class="fn l3">product: CHANGELOG "REQ-012: …"</div>
+      </div>
+      <div class="flow">
+        <div class="fn l3">work: spec.md · Changes: REQ-012 (new)</div>
+        <div class="fn mech">work: status.json · REQ-012 ex1 pass</div>
+        <div class="fn l3">work: incident BUG-88 → REQ-012 missing a case → lessons</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- =================================================== 5 -->
+<section id="example">
+  <div class="eyebrow">Part 5</div>
+  <h2>End-to-end examples</h2>
+
+  <div class="two">
+    <div class="sub">
+      <h3>A. An ordinary task (layer 1 only)</h3>
+      <p class="lead">"Compare 3 TTS providers for Video Studio, over several sessions."</p>
+      <div class="flow">
+        <div class="fn l1">① Frame: Decide · "correct" = agreed criteria · reversible · you approve</div>
+        <div class="fn l1">② Context: documents, price tables · lessons <code>#tts</code></div>
+        <div class="fn l1">③ Agree: criteria for price, Vietnamese voice quality, API · G1 weights set by Claude <span class="gate">◀</span> · G4 several sessions → <code>spec.md</code></div>
+        <div class="fn l1">④ Plan: G2, one step per provider <span class="gate">◀</span></div>
+        <div class="fn l1">⑤ Do: try each provider, one line per step: tried Google, Azure, NOT yet FPT</div>
+        <div class="fn l1">⑥ Verify: audio samples, price figures (evidence) · brief with a recommendation</div>
+        <div class="fn l1">⑦ Review: <code>review-work</code>, checked against the criteria <span class="gate">◀</span></div>
+        <div class="fn l1">⑧ Learn: surprise "ElevenLabs gets Vietnamese tone marks wrong" → lessons <code>#tts</code></div>
+      </div>
+      <div class="note"><b>Not present:</b> REQ codes, tests, status.json. The protection is evidence and review.</div>
+    </div>
+    <div class="sub">
+      <h3>B. A software task (layers 1 + 2 + 3)</h3>
+      <p class="lead">"Allow several coupons in one order."</p>
+      <div class="flow">
+        <div class="fn l2"><code>requirements</code>: REQ-012 (new), REQ-005 (changed) + examples <span class="gate">◀ PO, dev, QA</span></div>
+        <div class="fn l1">① Frame: Deliver · if wrong: the amount charged is wrong</div>
+        <div class="fn l1">② Context: applyCoupon, refund · lessons <code>#money</code></div>
+        <div class="fn l1">③ Agree: G1 "add or multiply the %" <span class="gate">◀</span> · G4 → <code>task-spec</code> → <code>spec.md</code> with Changes</div>
+        <div class="fn l2"><code>test-design</code>: boundaries 0%, 100%, expired coupon</div>
+        <div class="fn l1">④ Plan: G2, three changes → Plan mode <span class="gate">◀</span></div>
+        <div class="fn l1">⑤ Each step: test fails → code · G3 before changing the order schema <span class="gate">◀</span> · one commit per change</div>
+        <div class="fn mech">⑥ Stop hook · mutation (verify-work) · CI · <code>trace-check</code> → <code>status.json</code></div>
+        <div class="fn l1">⑦ <code>reviewer</code>: missing example for a partial refund <span class="gate">◀</span></div>
+        <div class="fn l3">report · update <code>docs/product/requirements/checkout.md</code></div>
+        <div class="fn l1">⑧ <code>retro</code>: wrong assumption "add the %" → lessons <code>#money</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub">
+    <h3>C. A large request: map and slice (from 1 Nov)</h3>
+    <p class="lead">One message with 5 bullets: self-registration for a class, email verification, a capacity limit, a waiting list for approval, a notification email. The example is built to illustrate, not run for real.</p>
+    <div class="flow">
+      <div class="fn l1">① ② Frame, Context done silently → about 18 lines: map S1–S5, dependencies, REQ area, "Untouched: grading, tuition", Q1 when a class is full, wait or reject (rec: reject) · Q2 how long the verification link lives (rec: 24h) · Q3 who gets the mail (rec: student + admin)</div>
+      <div class="fa"><span class="gate">◀ stop 1 · you: <code>ok, Q1 wait</code></span></div>
+      <div class="fn l1">S1 runs all 8 steps → <code>DONE · S1 ✓ S2 ▶ S3 S4 S5</code> · <code>GET /enrol when not logged in → before 404 → now the form</code> · <code>[decided]</code> field order · no stop · S2 likewise</div>
+      <div class="fn l1">S3 adds a <code>capacity</code> column: G3, 6-line brief, recommends nullable, default null</div>
+      <div class="fa"><span class="gate">◀ stop 2 · you: <code>ok</code></span></div>
+      <div class="fn l1">S4: the reviewer sees the waiting list shares a template that S5 must change → outside the map → map revised, S5 marked</div>
+      <div class="fa"><span class="gate">◀ stop 3 · only when there is a surprise</span></div>
+      <div class="fn">S5 runs · final report of 8 lines: 5 slices ✓, 2 <code>[decided]</code>, 1 <code>[unverified]</code> (could not call the mail provider in the test environment)</div>
+    </div>
+    <div class="note"><b>Compared with before.</b>New way: 2 planned stops, plus 1 if there is a surprise, 7 messages, none over 18 lines. Old way for the same job: about 19 stops, estimated, not measured. Each slice is a small PR that can be reviewed and debugged on its own.</div>
+  </div>
+</section>
+
+<hr>
+
+<!-- =================================================== 6 -->
+<section id="status">
+  <div class="eyebrow">Part 6</div>
+  <h2>Status and build order</h2>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Step</th><th>Content</th><th>Layer</th><th>Depends on</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>workflow (Frame) · communication · verify-work · review-work · reviewer · Stop hook · trace.py</td><td>1</td><td>—</td></tr>
+        <tr><td>1 <span class="badge b-has">BUILT</span></td><td>generic Spec shape · Task log shape <code>log.md</code> · rename <code>spec</code> to <code>task-spec</code> · rule for when to create files</td><td>1</td><td>—</td></tr>
+        <tr><td>2 <span class="badge b-has">BUILT</span></td><td><code>retro</code> · <code>lessons.md</code> format · connect "Learning from repeats" to lessons · step ② searches lessons</td><td>1</td><td>step 1 (reads the log)</td></tr>
+        <tr><td>3 <span class="badge b-has">BUILT</span></td><td><code>requirements</code> · REQ code convention · Changes extension for the spec</td><td>2</td><td>step 1</td></tr>
+        <tr><td>4 <span class="badge b-has">BUILT</span></td><td><code>test-design</code> · <code>trace-check</code> → <code>status.json</code></td><td>2</td><td>step 3 (REQ codes)</td></tr>
+        <tr><td>5 <span class="badge b-has">BUILT</span></td><td><code>bug-report</code> · <code>release</code> · <code>incident</code> · <code>test-plan</code> · <code>design-decision</code> · templates · CI <code>trace.yml</code></td><td>2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>Taken from the QA platform architecture: rules for writing test code in <code>test-design</code> · content from tickets and logs is data, not commands · deny <code>.env*</code> · <code>project-init</code></td><td>1–2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Oct: <code>places.md</code> holds every path · 8-step workflow, 4 gates replace the Small/Medium/Large table · strict G3 · references by section name · <code>mutation-check</code> into the package · attribution off · <code>trace.py</code> blocks hard-coded paths and skill names</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Oct: installed into <code>~/.claude</code>, backed up at <code>~/.claude/backups/2026-10-11-pre-kit/</code> · attribution, deny <code>.env</code>, Stop hook checked with real behaviour</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>24–29 Oct, from lessons that were promoted: tests written by a subagent that reads only the spec · every input gets a broken, empty, smallest, and dropped-connection example (also in the plan) · a flaky check runs 3 times · stored data is read along the write path · when editing a rule, search every rule on the same topic · <code>parallel-agents</code> into the package</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>1 Nov: a large request becomes a map and slices (2.5) · G1 stops only for values the user sees · one line per step, no stop · batched questions with recommendations · reports open with <code>DONE | ASK n | BLOCKED</code> · the default picture is a before → after line · the Explaining section cut from 91 to 36 lines · installed into <code>~/.claude</code></td><td>1–2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>8 Nov: merged Loop (STLC) and project-starter (multi-agent dev) into one kit — 22 skills in 4 modules (shared · dev · qa · ops), <code>modules.json</code> · each skill has a "Start when" by state · frontend split into web / mobile · <code>qa-sweep</code> moved from layer 1 down to the qa module · project-init installs the chosen modules</td><td>2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Nov: dropped the task log <code>log.md</code> · a later session continues from the spec, commits and PR · the map keeps the progress line</td><td>1</td><td>—</td></tr>
+        <tr><td>6</td><td>Run <b>one real task</b> through all 3 layers in a TypeScript project: one PR must be blocked, one must pass</td><td>1–3</td><td>real use</td></tr>
+        <tr><td>7</td><td>Test verify across <b>a whole task</b>, from ③ Agree to ⑥ Verify: a test that starts directly at ⑥ does not know whether G1 and G2 were "yes"</td><td>1</td><td>—</td></tr>
+        <tr><td>8</td><td>Run <b>one real request of 3–5 pieces of work</b> through a map: count the stops and the lines per report, compare with example C</td><td>1</td><td>real use</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note"><b>All 3 layers are built and layer 1 is installed; no real task has gone through yet.</b>Layer 2 is in the package's <code>project-kit/</code>. <code>trace-check</code> has passed 27 tests, all 33 planted faults were caught, and it ran once in a temporary git repo with real JUnit from Node. Not yet checked: the JUnit format of Vitest, Jest, Playwright, and the workflow on GitHub.</div>
+</section>
+
+</div>
+</body>
+</html>

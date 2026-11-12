@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Three-layer architecture: SDLC and STLC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F6F7F9;
+    --panel: #FFFFFF;
+    --ink: #1B2233;
+    --muted: #5E6880;
+    --line: #D5DAE3;
+    --l1: #2F6FB3;      /* global */
+    --l1-bg: #EAF2FB;
+    --l2: #2E8A63;      /* project */
+    --l2-bg: #E7F5EE;
+    --l3: #9A5B12;      /* artifacts */
+    --l3-bg: #FBF1E3;
+    --gate: #C0392B;
+    --new: #7A3FB0;
+    --thread: #C98410;
+    --sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+      --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A;
+      --l3: #E3A95C; --l3-bg: #33261A; --gate: #F07A6C; --new: #C39AF0; --thread: #F0B44C;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+    --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A;
+    --l3: #E3A95C; --l3-bg: #33261A; --gate: #F07A6C; --new: #C39AF0; --thread: #F0B44C;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); padding-inline: 16px; padding-block: 28px 64px; }
+  .wrap { max-width: 1280px; margin-inline: auto; display: grid; gap: 40px; }
+  h1 { font-size: 1.7rem; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 1.3rem; margin: 0 0 4px; }
+  h3 { font-size: 1rem; margin: 0 0 8px; }
+  p { margin: 0; max-width: 72ch; }
+  .lead { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  nav a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 5px 10px; font-size: .88rem; }
+  nav a:hover { border-color: var(--muted); }
+  a:focus-visible { outline: 2px solid var(--thread); outline-offset: 2px; }
+
+  /* ---- overview stack ---- */
+  .stack { display: grid; gap: 10px; }
+  .layer { border-radius: 6px; padding: 14px 16px; border: 1.5px solid; display: grid; grid-template-columns: 210px 1fr; gap: 6px 18px; align-items: start; }
+  .layer .tag { font-weight: 700; }
+  .layer .tag small { display: block; font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+  .layer ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .layer li { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; font-size: .86rem; }
+  .L1 { border-color: var(--l1); background: var(--l1-bg); } .L1 .tag { color: var(--l1); }
+  .L2 { border-color: var(--l2); background: var(--l2-bg); } .L2 .tag { color: var(--l2); }
+  .L3 { border-color: var(--l3); background: var(--l3-bg); } .L3 .tag { color: var(--l3); }
+  .arrow-between { text-align: center; color: var(--muted); font-family: var(--mono); font-size: .85rem; }
+  @media (max-width: 640px) { .layer { grid-template-columns: 1fr; } }
+
+  /* ---- naming table ---- */
+  .tablebox { overflow-x: auto; }
+  table.names { border-collapse: collapse; min-width: 640px; width: 100%; background: var(--panel); border: 1px solid var(--line); }
+  table.names th, table.names td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .9rem; }
+  table.names th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+
+  /* ---- lifecycle matrix ---- */
+  .matrix-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .matrix { display: grid; min-width: 1100px; }
+  .matrix.sdlc { grid-template-columns: 150px repeat(7, 1fr); }
+  .matrix.stlc { grid-template-columns: 150px repeat(6, 1fr); }
+  .cell { padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: .84rem; display: grid; gap: 6px; align-content: start; }
+  .cell:last-child { border-right: none; }
+  .head { background: var(--bg); font-weight: 700; font-size: .88rem; position: relative; }
+  .head .purpose { font-weight: 400; font-family: var(--mono); font-size: .74rem; color: var(--muted); }
+  .rowhead { font-weight: 700; position: sticky; left: 0; z-index: 1; }
+  .rowhead small { display: block; font-weight: 400; font-size: .74rem; font-family: var(--mono); }
+  .r1 { background: var(--l1-bg); } .r1.rowhead { color: var(--l1); }
+  .r2 { background: var(--l2-bg); } .r2.rowhead { color: var(--l2); }
+  .r3 { background: var(--l3-bg); } .r3.rowhead { color: var(--l3); }
+  .item { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 7px; line-height: 1.35; }
+  .item .mono { display: block; }
+  .badge { display: inline-block; font-size: .68rem; font-weight: 700; border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; letter-spacing: .02em; }
+  .b-new { color: var(--new); border: 1px solid var(--new); }
+  .b-ren { color: var(--l1); border: 1px solid var(--l1); }
+  .shared { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--thread); border: 1px solid var(--thread); border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+  .gate { color: var(--gate); font-weight: 700; font-size: .78rem; }
+  .gaterow { background: var(--panel); }
+  .gaterow.rowhead { color: var(--gate); }
+  .thread { background: var(--panel); font-family: var(--mono); font-size: .76rem; color: var(--thread); }
+  .thread.rowhead { font-family: var(--sans); font-size: .84rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .85rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--thread); border-radius: 4px; padding: 12px 14px; font-size: .9rem; }
+  .note b { display: block; margin-bottom: 4px; }
+
+  /* ---- thread diagram ---- */
+  .threadline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); font-size: .82rem; }
+  .threadline .n { background: var(--panel); border: 1.5px solid var(--thread); border-radius: 4px; padding: 5px 9px; }
+  .threadline .a { color: var(--thread); }
+  .flowbox { display: grid; gap: 6px; max-width: 900px; }
+  .fnode { border: 1.5px solid var(--line); background: var(--panel); border-radius: 6px; padding: 10px 14px; font-size: .9rem; }
+  .fnode.in { border-style: dashed; color: var(--muted); }
+  .fnode.core { border-color: var(--l2); background: var(--l2-bg); display: grid; gap: 8px; }
+  .fnode.art { border-color: var(--l3); background: var(--l3-bg); }
+  .fnode.side { border-color: var(--l2); }
+  .lenses { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lens { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font-size: .86rem; }
+  .lens b { display: block; }
+  .farrow { color: var(--muted); font-family: var(--mono); font-size: .82rem; padding-left: 18px; }
+  .split2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .lenses, .split2 { grid-template-columns: 1fr; } }
+  section { display: grid; gap: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Three-layer architecture applied to SDLC and STLC</h1>
+    <p class="lead">Layer 1 is the shared frame used for every task. Layer 2 is the part specific to each project. Layer 3 is the artifacts that live in the repo and are passed from one stage to the next. The requirement id (<code>REQ-…</code>) is the thread that ties the artifacts together. This is the view as SDLC and STLC matrices, updated 1 Nov 2026. Everything on this page has been built. A fuller overview is <code>overview.html</code>.</p>
+    <nav>
+      <a href="#layers">Three layers</a>
+      <a href="#names">Three kinds of "spec"</a>
+      <a href="#shared">Shared node: requirement analysis</a>
+      <a href="#sdlc">SDLC</a>
+      <a href="#stlc">STLC</a>
+      <a href="#thread">REQ thread</a>
+    </nav>
+  </header>
+
+  <!-- ================= LAYERS ================= -->
+  <section id="layers">
+    <h2>Three layers</h2>
+    <div class="stack">
+      <div class="layer L1">
+        <div class="tag">Layer 1 · Global<small>~/.claude/</small></div>
+        <ul>
+          <li><code>workflow.md</code>: 8 steps · 4 gates · map and slice · evidence</li>
+          <li><code>communication.md</code>: shapes for report, plan, map, spec</li>
+          <li><code>places.md</code>: where files go</li>
+          <li><code>task-spec</code></li>
+          <li><code>verify-work</code></li>
+          <li><code>review-work</code></li>
+          <li><code>retro</code></li>
+          <li><code>project-init</code></li>
+          <li><code>parallel-agents</code></li>
+          <li>subagent <code>reviewer</code></li>
+          <li>Stop hook <code>require_tests.py</code></li>
+          <li>Plan mode</li>
+          <li>deny <code>.env*</code> · attribution off</li>
+        </ul>
+      </div>
+      <div class="arrow-between">▲ the project reuses layer 1 and does not change it</div>
+      <div class="layer L2">
+        <div class="tag">Layer 2 · Project<small>repo/CLAUDE.md, repo/.claude/</small></div>
+        <ul>
+          <li><code>CLAUDE.md</code>: Test command, build/lint, architecture, REQ id convention</li>
+          <li>26 skills, 4 modules · <code>modules.json</code> · project-init installs what is needed</li>
+          <li>shared: <code>requirements</code> <small>shared by SDLC + STLC</small> · <code>requirement-review</code> · <code>review-change</code></li>
+          <li>dev: <code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>backend</code> · <code>frontend</code> <small>web/mobile</small> · <code>design-decision</code></li>
+          <li>qa: <code>qa-foundations</code> · <code>test-design</code> · <code>test-authoring</code> · <code>test-execution</code> · <code>bug-report</code> · <code>test-plan</code> · <code>visual-review</code> · <code>qa-sweep</code> · <code>playwright-cli</code></li>
+          <li>ops: <code>release</code> · <code>incident</code></li>
+          <li>CI: test · lint · <code>trace-check</code> · mutation</li>
+          <li>PR template · pre-commit</li>
+        </ul>
+      </div>
+      <div class="arrow-between">▲ creates and reads</div>
+      <div class="layer L3">
+        <div class="tag">Layer 3 · Artifacts<small>repo/docs/product/, repo/.work/, tests/</small></div>
+        <ul>
+          <li><code>docs/product/requirements/</code> (lives forever, REQ ids)</li>
+          <li><code>.work/tasks/</code> (task specs, archived after merge)</li>
+          <li><code>docs/product/decisions/</code> (ADR)</li>
+          <li><code>.work/test-plans/</code></li>
+          <li>tests <code>test_REQ_…</code></li>
+          <li>traceability matrix</li>
+          <li><code>CHANGELOG</code></li>
+          <li><code>.work/incidents/</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= NAMES ================= -->
+  <section id="names">
+    <h2>Three kinds of "spec", three different names</h2>
+    <p class="lead">They are kept apart so ids do not collide. The id belongs to the requirement, because a requirement lasts a long time. The task spec only refers to that id.</p>
+    <div class="tablebox">
+      <table class="names">
+        <thead><tr><th>Name</th><th>Description</th><th>Lifecycle</th><th>Id</th><th>Where kept</th></tr></thead>
+        <tbody>
+          <tr><td><b>Requirement</b><br><small>skill <code>requirements</code></small></td><td>What the system <em>must do</em>, as it stands now</td><td>Lives forever, updated when behaviour changes</td><td>Owns the id <code>REQ-CHECKOUT-012</code></td><td><code>docs/product/requirements/</code></td></tr>
+          <tr><td><b>Map</b><br><small>Map shape in communication</small></td><td><em>One large request</em> split into slices: order, dependencies, what each touches, questions to decide first</td><td>One request, updated as each slice is done</td><td>Lists the REQ ids each slice touches</td><td><code>.work/tasks/&lt;date&gt;-&lt;name&gt;/map.md</code></td></tr>
+          <tr><td><b>Task spec</b><br><small>skill <code>task-spec</code></small></td><td><em>This change</em>, or one slice of a map: scope, files, examples, how to check it is done</td><td>One task, archived after merge</td><td>Refers to REQ ids</td><td><code>.work/tasks/&lt;date&gt;-&lt;name&gt;/spec.md</code> · slice: <code>…-s1/spec.md</code></td></tr>
+          <tr><td><b>Test design / plan</b></td><td>What to test, with which technique, entry and exit criteria</td><td>Per feature</td><td>Tests carry the REQ id</td><td><code>.work/test-plans/</code>, tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SHARED ================= -->
+  <section id="shared">
+    <h2>Shared node: requirement analysis</h2>
+    <p class="lead">SDLC and STLC read the same input, so the analysis is done once with two lenses, not split into two activities. The shared output is the acceptance examples: they are both the target for dev to build and the test cases for QA to check. This is the Three Amigos practice from BDD: PO, dev and QA analyse together, once.</p>
+    <div class="flowbox">
+      <div class="fnode in">PRD · ticket · talk with the PO</div>
+      <div class="farrow">▼</div>
+      <div class="fnode core"><div><b><code>requirements</code></b> · layer 2</div>
+        <div class="lenses">
+          <div class="lens"><b>SDLC lens</b>complete? contradictions? feasible?</div>
+          <div class="lens"><b>STLC lens</b>testable? where are the boundaries? what are the test conditions?</div>
+        </div>
+        <small>A rule that cannot be written as one concrete example is vague: ask again, do not guess.</small>
+      </div>
+      <div class="farrow">▼ <span class="gate">◀ PO, dev, QA approve the examples</span></div>
+      <div class="fnode art"><span class="mono">docs/product/requirements/&lt;area&gt;.md</span> · REQ-CHECKOUT-012 + acceptance examples</div>
+      <div class="split2">
+        <div><div class="farrow">▼</div><div class="fnode side">SDLC: <code>task-spec</code> refers to REQ → plan → code</div></div>
+        <div><div class="farrow">▼</div><div class="fnode side">STLC: <code>test-plan</code> → <code>test-design</code> from the same examples</div></div>
+      </div>
+      <div class="farrow">▼ meet again</div>
+      <div class="fnode art">tests pass = requirement met · <code>trace-check</code> proves it</div>
+    </div>
+    <div class="tablebox">
+      <table class="names">
+        <thead><tr><th>Boundary</th><th><code>requirements</code></th><th><code>task-spec</code></th></tr></thead>
+        <tbody>
+          <tr><td>Answers</td><td>What the system must do</td><td>What this change does, where, and when it is done</td></tr>
+          <tr><td>When to use</td><td>A new or changed requirement exists, even when there is no task yet</td><td>When the work runs past one session (G4), or it is unclear what correct means</td></tr>
+          <tr><td>REQ id</td><td>Creates it, keeps it stable</td><td>Only refers to it. If the REQ does not exist yet, call <code>requirements</code> first</td></tr>
+          <tr><td>Ends</td><td>The requirement is approved</td><td>Code and tests are done and the requirement has been updated</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SDLC ================= -->
+  <section id="sdlc">
+    <h2>1. SDLC: three layers by stage</h2>
+    <p class="lead">Each stage matches a purpose in Frame the task. Work in small loops per feature, not as a waterfall for the whole project.</p>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--l1);background:var(--l1-bg)"></i>Layer 1 global</span>
+      <span><i class="sw" style="border-color:var(--l2);background:var(--l2-bg)"></i>Layer 2 project</span>
+      <span><i class="sw" style="border-color:var(--l3);background:var(--l3-bg)"></i>Layer 3 artifact</span>
+      <span><b class="gate">◀</b> approver</span>
+    </div>
+    <div class="matrix-scroll">
+      <div class="matrix sdlc">
+        <div class="cell head rowhead" style="background:var(--bg)"></div>
+        <div class="cell head">Requirements <span class="shared">⇄ shared with STLC</span><div class="purpose">Deliver: spec</div></div>
+        <div class="cell head">Design<div class="purpose">Decide</div></div>
+        <div class="cell head">Code<div class="purpose">Deliver: steps</div></div>
+        <div class="cell head">Test<div class="purpose">Deliver: verify</div></div>
+        <div class="cell head">Review<div class="purpose">review-work</div></div>
+        <div class="cell head">Release<div class="purpose">Irreversible</div></div>
+        <div class="cell head">Operations<div class="purpose">Restore · Learn</div></div>
+
+        <!-- gates -->
+        <div class="cell gaterow rowhead">Approval gates</div>
+        <div class="cell gaterow"><span class="gate">◀ approve acceptance examples</span></div>
+        <div class="cell gaterow"><span class="gate">◀ approve ADR</span></div>
+        <div class="cell gaterow"><span class="gate">◀ approve the plan, or the map once, at G2 (Plan mode)</span><br><span class="gate">◀ G3 before a step that is hard to undo</span></div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow"><span class="gate">◀ PR reviewer</span></div>
+        <div class="cell gaterow"><span class="gate">◀ before a step that is hard to undo (G3)</span></div>
+        <div class="cell gaterow"><span class="gate">◀ approve postmortem</span></div>
+
+        <!-- L1 -->
+        <div class="cell r1 rowhead">Layer 1<small>global</small></div>
+        <div class="cell r1"><div class="item"><code>task-spec</code></div><div class="item">Frame: what "correct" means</div></div>
+        <div class="cell r1"><div class="item">Frame: Decide</div><div class="item">brief (Asking for a decision)</div></div>
+        <div class="cell r1"><div class="item">workflow: steps, tests first, gates G2, G3</div><div class="item">map → slice, one line per step</div><div class="item">Plan mode</div><div class="item">Stop hook</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: includes mutation</div></div>
+        <div class="cell r1"><div class="item"><code>review-work</code></div><div class="item">subagent <code>reviewer</code></div></div>
+        <div class="cell r1"><div class="item">Frame: Irreversible (dry run, rollback, ask)</div></div>
+        <div class="cell r1"><div class="item">Frame: Restore, Learn</div><div class="item">Learning from repeats</div></div>
+
+        <!-- L2 -->
+        <div class="cell r2 rowhead">Layer 2<small>project</small></div>
+        <div class="cell r2"><div class="item"><code>requirements</code><br><small>PRD, ticket → REQ + examples, two lenses</small></div><div class="item">CLAUDE.md: REQ id convention, link to the ticket tool</div></div>
+        <div class="cell r2"><div class="item"><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code><br><small>structure, interface/data contract, UI tokens</small></div><div class="item"><code>design-decision</code> <small>when needed</small></div></div>
+        <div class="cell r2"><div class="item"><code>backend</code> · <code>frontend</code> <small>web/mobile</small><br><small>code to the contract</small></div><div class="item">CLAUDE.md: Test command, build, lint · pre-commit</div></div>
+        <div class="cell r2"><div class="item">the STLC skill set (see section 2)</div><div class="item">CI</div></div>
+        <div class="cell r2"><div class="item">PR template</div><div class="item">CI: required checks</div></div>
+        <div class="cell r2"><div class="item"><code>release</code></div><div class="item">CI/CD, feature flag</div></div>
+        <div class="cell r2"><div class="item"><code>incident</code></div><div class="item">monitoring, alerts</div></div>
+
+        <!-- L3 -->
+        <div class="cell r3 rowhead">Layer 3<small>artifact</small></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/requirements/</span>REQ ids + examples</div><div class="item"><span class="mono">.work/tasks/…/spec.md</span></div></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/decisions/</span>ADR</div></div>
+        <div class="cell r3"><div class="item">code + tests <span class="mono">test_REQ_…</span></div><div class="item">commit mentions the REQ id</div></div>
+        <div class="cell r3"><div class="item">CI results</div><div class="item">traceability matrix</div></div>
+        <div class="cell r3"><div class="item">PR, review findings</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">CHANGELOG</span>release notes, rollback plan</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">.work/incidents/</span>timeline, postmortem</div><div class="item">→ new check (test, lint, hook)</div></div>
+
+        <!-- thread -->
+        <div class="cell thread rowhead">REQ thread</div>
+        <div class="cell thread">REQ-CHECKOUT-012 created</div>
+        <div class="cell thread">ADR mentions REQ-012</div>
+        <div class="cell thread">test_REQ_CHECKOUT_012_…</div>
+        <div class="cell thread">trace-check: REQ-012 ✓ has a test</div>
+        <div class="cell thread">reviewer checks against REQ-012</div>
+        <div class="cell thread">CHANGELOG: REQ-012</div>
+        <div class="cell thread">incident → REQ-012 missing a case → new test</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STLC ================= -->
+  <section id="stlc">
+    <h2>2. STLC: three layers by stage</h2>
+    <p class="lead">STLC slots into SDLC at the Requirements stage, before code is written: tests are designed from the acceptance examples, then the code is written to make the tests pass.</p>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--l1);background:var(--l1-bg)"></i>Layer 1 global</span>
+      <span><i class="sw" style="border-color:var(--l2);background:var(--l2-bg)"></i>Layer 2 project</span>
+      <span><i class="sw" style="border-color:var(--l3);background:var(--l3-bg)"></i>Layer 3 artifact</span>
+      <span><b class="gate">◀</b> approver</span>
+    </div>
+    <div class="matrix-scroll">
+      <div class="matrix stlc">
+        <div class="cell head rowhead" style="background:var(--bg)"></div>
+        <div class="cell head">Requirement analysis <span class="shared">⇄ shared with SDLC</span><div class="purpose">testable yet?</div></div>
+        <div class="cell head">Test planning<div class="purpose">by risk</div></div>
+        <div class="cell head">Test case design<div class="purpose">techniques</div></div>
+        <div class="cell head">Environment, data<div class="purpose">real run on a copy</div></div>
+        <div class="cell head">Execution, bug reports<div class="purpose">evidence</div></div>
+        <div class="cell head">Test closure<div class="purpose">exit criteria</div></div>
+
+        <!-- gates -->
+        <div class="cell gaterow rowhead">Approval gates</div>
+        <div class="cell gaterow"><span class="gate">◀ approve examples</span></div>
+        <div class="cell gaterow"><span class="gate">◀ approve entry and exit criteria</span><br><small>release, large feature, risky change</small></div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow"><span class="gate">◀ accept the remaining risk</span></div>
+
+        <!-- L1 -->
+        <div class="cell r1 rowhead">Layer 1<small>global</small></div>
+        <div class="cell r1"><div class="item"><code>task-spec</code>: fresh-session test</div><div class="item">Frame question 2: what "correct" means</div></div>
+        <div class="cell r1"><div class="item">Frame question 3: the cost of being wrong → test level</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: tests from examples, property tests, a different context</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: real run on a copy</div></div>
+        <div class="cell r1"><div class="item">Stop hook</div><div class="item">evidence rule, <code>[unverified]</code></div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: check the checks, mutation</div><div class="item"><code>review-work</code></div></div>
+
+        <!-- L2 -->
+        <div class="cell r2 rowhead">Layer 2<small>project</small></div>
+        <div class="cell r2"><div class="item"><code>requirements</code><br><small>same skill as the Requirements column of SDLC: the "testable yet?" lens</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-plan</code><br><small>test levels, what is automated, entry and exit criteria</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-design</code><br><small>equivalence partitioning · boundary values · decision table · state transition · pairwise</small></div><div class="item"><code>test-authoring</code> · <code>qa-foundations</code> <small>shared QA base</small></div></div>
+        <div class="cell r2"><div class="item">CLAUDE.md: fixtures, seed, test environment</div><div class="item"><code>playwright-cli</code> <small>drives a real browser</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-execution</code> · <code>bug-report</code></div><div class="item"><code>qa-sweep</code> · <code>visual-review</code> <small>measure the running app</small></div><div class="item">CI runs tests</div></div>
+        <div class="cell r2"><div class="item"><code>trace-check</code><br><small>CI script: fails when a REQ has no test</small></div><div class="item">CI: mutation on changed risky files</div></div>
+
+        <!-- L3 -->
+        <div class="cell r3 rowhead">Layer 3<small>artifact</small></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/requirements/</span>REQ ids + examples</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">.work/test-plans/&lt;feature&gt;.md</span></div></div>
+        <div class="cell r3"><div class="item">test cases <span class="mono">test_REQ_…</span></div><div class="item">decision table, state diagram</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">fixtures/</span>seed data</div></div>
+        <div class="cell r3"><div class="item">CI results</div><div class="item">bug report (refers to the REQ id)</div></div>
+        <div class="cell r3"><div class="item">REQ → test → result matrix</div><div class="item">mutation report</div></div>
+
+        <!-- thread -->
+        <div class="cell thread rowhead">REQ thread</div>
+        <div class="cell thread">REQ-012: 3 examples, 1 marked `assumed`</div>
+        <div class="cell thread">REQ-012: high risk (money) → unit + e2e</div>
+        <div class="cell thread">boundary values: 0%, 100%, 2 coupons</div>
+        <div class="cell thread">seed: coupon expired yesterday</div>
+        <div class="cell thread">BUG-88 → REQ-012 · 100% boundary</div>
+        <div class="cell thread">REQ-012: 5 tests ✓ · mutation 92%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= THREAD ================= -->
+  <section id="thread">
+    <h2>The REQ thread links SDLC and STLC</h2>
+    <p class="lead">The requirement id runs through every artifact, so the question "does this requirement have a test yet, and which release shipped it" becomes a question a script can answer.</p>
+    <div class="threadline">
+      <span class="n">requirement<br>REQ-CHECKOUT-012</span><span class="a">→</span>
+      <span class="n">task spec<br>Changes: REQ-012 (new)</span><span class="a">→</span>
+      <span class="n">test plan / design<br>boundaries, decision table</span><span class="a">→</span>
+      <span class="n">test<br>test_REQ_CHECKOUT_012_…</span><span class="a">→</span>
+      <span class="n">commit / PR<br>"REQ-012: …"</span><span class="a">→</span>
+      <span class="n">trace-check<br>REQ-012 ✓</span><span class="a">→</span>
+      <span class="n">release<br>CHANGELOG</span><span class="a">→</span>
+      <span class="n">incident<br>BUG-88 → REQ-012</span>
+    </div>
+    <div class="notes">
+      <div class="note"><b>A task is done only when the requirement is updated.</b>The task spec records which REQs are added or changed. The "Done when" step includes editing the requirement file, so the docs do not drift away from the code.</div>
+      <div class="note"><b>The strongest mechanism in layer 2 is CI.</b>CI runs independently of Claude, on every PR, including code written by people. The Stop hook is only an early stop while working.</div>
+      <div class="note"><b>All 7 layer 2 skills are built.</b>They live in the package's <code>project-kit/</code> and are installed into a repo with <code>project-init</code>. No real task has used them yet. The next step is one PR that must be blocked and one PR that must pass, in a TypeScript project.</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
