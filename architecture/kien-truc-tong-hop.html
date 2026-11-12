@@ -184,7 +184,7 @@
       <div class="layer L3">
         <div class="name">Lớp 3 · Artifact: bộ nhớ nằm trong repo</div>
         <div class="where">repo/docs/product/ · repo/.work/ · tests/ · mặc định, project đổi được</div>
-        <div class="what">sản phẩm: requirement · test case · ADR · test · changelog <br>công việc: spec · log · status của task · test plan · incident · lessons</div>
+        <div class="what">sản phẩm: requirement · test case · ADR · test · changelog <br>công việc: spec · status của task · test plan · incident · lessons</div>
       </div>
     </div>
     <div class="principle">
@@ -211,7 +211,7 @@
     <h3>Bốn mục đích của việc ghi lại</h3>
     <div class="purposes">
       <div class="purpose"><span class="k">Định nghĩa</span>"Đúng" là gì, trước khi làm<span class="f">spec.md · requirement</span></div>
-      <div class="purpose"><span class="k">Ghi lại</span>Trạng thái và quyết định, để tiếp tục và kiểm tra lại<span class="f">log.md</span></div>
+      <div class="purpose"><span class="k">Ghi lại</span>Trạng thái và quyết định, để tiếp tục và kiểm tra lại<span class="f">spec.md · commit · PR</span></div>
       <div class="purpose"><span class="k">Chặn</span>Không cho báo xong khi chưa có bằng chứng<span class="f">status.json · hook · CI</span></div>
       <div class="purpose"><span class="k">Học</span>Điều bất ngờ gặp lần 2 thì thành rule hoặc check<span class="f">lessons.md</span></div>
     </div>
@@ -234,7 +234,7 @@
         <h4>Luôn nạp</h4>
         <ul>
           <li><code>workflow.md</code> <span class="badge b-has">CÓ</span><br><small>hard rules · 8 bước · 4 gate · nhánh lỗi · context. Không đường dẫn, không tên skill</small></li>
-          <li><code>communication.md</code> <span class="badge b-has">CÓ</span><br><small>cách viết · hình mặc định là dòng trước → sau · mẫu báo cáo, plan, map, brief, spec, review, log, bài học · mã trả lời <code>ok</code>, <code>Q2 b</code></small></li>
+          <li><code>communication.md</code> <span class="badge b-has">CÓ</span><br><small>cách viết · hình mặc định là dòng trước → sau · mẫu báo cáo, plan, map, brief, spec, review, bài học · mã trả lời <code>ok</code>, <code>Q2 b</code></small></li>
           <li><code>places.md</code> <span class="badge b-has">CÓ</span><br><small>chỗ để mặc định của mỗi file · project ghi đè được (2.6)</small></li>
         </ul>
       </div>
@@ -276,9 +276,9 @@
       <div class="phase head"><span>#</span><span>Bước</span><span>Làm gì</span><span>Thành phần · Output</span></div>
       <div class="phase"><span class="n">①</span><span class="t">Frame<small>đóng khung</small></span><span>Trả lời 4 câu hỏi (2.3). Làm trong đầu, chỉ nói ra khi mục đích không phải Deliver</span><span><span class="lbl">dùng</span>workflow: Frame the task<span class="lbl">ra</span>cách làm</span></div>
       <div class="phase"><span class="n">②</span><span class="t">Context<small>thu thập</small></span><span>Rộng → xếp hạng rủi ro → sâu theo luồng dữ liệu → rộng lại tại từng điểm. Tìm trong lessons theo tag</span><span><span class="lbl">dùng</span>workflow: Gathering context · lessons<span class="lbl">ra</span>bản đồ, đã xem / chưa xem</span></div>
-      <div class="phase"><span class="n">③</span><span class="t">Agree<small>thống nhất "đúng"</small> <span class="gate">◀</span></span><span>Viết ví dụ nghiệm thu trước. <b>G1</b>: có giá trị tự đặt mà user nhìn thấy thì đưa ví dụ (<code>assumed</code>) và chờ. Giá trị tự đặt user không thấy thì tự quyết và ghi vào báo cáo. <b>G4</b>: quá một session thì spec và log thành file. Chưa rõ "đúng" thì tìm chuẩn đối chiếu</span><span><span class="lbl">dùng</span>spec skill · mẫu Spec<span class="lbl">ra</span>ví dụ · <code>spec.md</code> khi G4</span></div>
+      <div class="phase"><span class="n">③</span><span class="t">Agree<small>thống nhất "đúng"</small> <span class="gate">◀</span></span><span>Viết ví dụ nghiệm thu trước. <b>G1</b>: có giá trị tự đặt mà user nhìn thấy thì đưa ví dụ (<code>assumed</code>) và chờ. Giá trị tự đặt user không thấy thì tự quyết và ghi vào báo cáo. <b>G4</b>: quá một session thì spec thành file. Chưa rõ "đúng" thì tìm chuẩn đối chiếu</span><span><span class="lbl">dùng</span>spec skill · mẫu Spec<span class="lbl">ra</span>ví dụ · <code>spec.md</code> khi G4</span></div>
       <div class="phase"><span class="n">④</span><span class="t">Plan<small>chia bước</small> <span class="gate">◀</span></span><span>Mỗi bước một thay đổi logic, rủi ro đi trước, code chạy được sau mỗi bước. <b>G2</b>: nhiều hơn một commit thì plan chờ duyệt. Nhiều deliverable, quá 3 bước, hoặc nhiều yêu cầu trong một tin thì thành map, duyệt một lần (2.5)</span><span><span class="lbl">dùng</span>Plan mode · mẫu Plan, Map<span class="lbl">ra</span>plan · <code>map.md</code></span></div>
-      <div class="phase"><span class="n">⑤</span><span class="t">Do<small>thực hiện</small> <span class="gate">◀</span></span><span>Mỗi bước: test từ ví dụ, thấy fail, rồi code. Test phải đỏ đúng vì lỗi nó canh; bản sửa viết trước test thì trả bản sửa về, thấy đỏ, rồi khôi phục. <b>G3</b>: trước bước khó hoàn tác, nói nó làm hỏng gì và hỏi, kể cả khi đã được yêu cầu rõ. Có plan thì mỗi bước báo một dòng rồi đi tiếp, không dừng</span><span><span class="lbl">dùng</span>Stop hook · mutation check skill<span class="lbl">ra</span>kết quả · <code>log.md</code> cập nhật</span></div>
+      <div class="phase"><span class="n">⑤</span><span class="t">Do<small>thực hiện</small> <span class="gate">◀</span></span><span>Mỗi bước: test từ ví dụ, thấy fail, rồi code. Test phải đỏ đúng vì lỗi nó canh; bản sửa viết trước test thì trả bản sửa về, thấy đỏ, rồi khôi phục. <b>G3</b>: trước bước khó hoàn tác, nói nó làm hỏng gì và hỏi, kể cả khi đã được yêu cầu rõ. Có plan thì mỗi bước báo một dòng rồi đi tiếp, không dừng</span><span><span class="lbl">dùng</span>Stop hook · mutation check skill<span class="lbl">ra</span>kết quả · mỗi thay đổi một commit</span></div>
       <div class="phase"><span class="n">⑥</span><span class="t">Verify<small>kiểm chứng</small></span><span>Khi G1 hoặc G2: bằng chứng, không khẳng định. Đối chiếu với ví dụ đã duyệt. Check the checks. Báo cáo đọc được khi đã quên context</span><span><span class="lbl">dùng</span>verify skill · mẫu Report of finished work<span class="lbl">ra</span>bằng chứng · <code>[unverified]</code> · báo cáo</span></div>
       <div class="phase"><span class="n">⑦</span><span class="t">Review<small>độc lập</small> <span class="gate">◀</span></span><span>Sau bước cuối của việc có plan (G2), hoặc khi được yêu cầu. Context mới, chỉ thấy kết quả và chuẩn đối chiếu, được yêu cầu bác bỏ</span><span><span class="lbl">dùng</span>review skill · subagent <code>reviewer</code><span class="lbl">ra</span>mẫu Review findings</span></div>
       <div class="phase"><span class="n">⑧</span><span class="t">Learn<small>học</small></span><span>Khi có điều bất ngờ (bị sửa, check fail, plan phải đổi), sau sự cố, hoặc khi được yêu cầu. Gặp lần 2 thì thăng cấp thành check</span><span><span class="lbl">dùng</span>retro skill<span class="lbl">ra</span><code>lessons.md</code> · check mới</span></div>
@@ -314,7 +314,7 @@
       <div class="fq"><b>G1 · ở ③ Agree</b>Viết ví dụ nghiệm thu trước. Có giá trị nào user nhìn thấy (nhãn, định dạng, thông báo, mặc định) do Claude tự đặt, không đến từ yêu cầu, code hay bạn? → đưa ví dụ, đánh dấu <code>assumed</code> <span class="gate">◀ chờ</span> · giá trị tự đặt user không thấy: tự quyết, ghi <code>[decided]</code></div>
       <div class="fq"><b>G2 · ở ④ Plan</b>Cần nhiều hơn một thay đổi logic, tức nhiều hơn một commit? → plan, mỗi bước một thay đổi <span class="gate">◀ duyệt</span> · nhiều deliverable, quá 3 bước, hoặc nhiều yêu cầu trong một tin? → map các slice <span class="gate">◀ duyệt map một lần</span> (2.5)</div>
       <div class="fq"><b>G3 · trước mọi bước</b>Bước tới khó hoàn tác: API, data model, dữ liệu đã lưu, bảo mật, migration, thứ đã công bố? → nói nó làm hỏng gì, hỏi cách triển khai, kể cả khi đã được yêu cầu rõ <span class="gate">◀ hỏi</span></div>
-      <div class="fq"><b>G4 · ở ③ Agree</b>Việc kéo dài quá session này, hoặc chạy khi vắng mặt? → spec và log thành file</div>
+      <div class="fq"><b>G4 · ở ③ Agree</b>Việc kéo dài quá session này, hoặc chạy khi vắng mặt? → spec thành file</div>
     </div>
     <div class="tablebox">
       <table>
@@ -389,7 +389,7 @@ spec slice từng nhánh: điều kiện → kết quả,
         <tbody>
           <tr><td>Dòng đầu mỗi báo cáo: <code>DONE</code> không cần làm gì · <code>ASK n</code> có n câu hỏi ngay bên dưới · <code>BLOCKED</code> kèm lý do bị chặn</td><td><code>ok</code>: chấp nhận mọi đề xuất</td></tr>
           <tr><td>Hành vi đổi: 1–3 dòng trước → sau, giá trị thật · diagram chỉ khi luồng rẽ nhánh</td><td><code>Q2 b</code>: chọn b cho câu Q2</td></tr>
-          <tr><td>Khoảng 8 dòng trong chat · chi tiết nằm trong <code>log.md</code></td><td><code>S3 drop</code>: bỏ slice S3 · <code>F2</code>, <code>all</code>: xem chi tiết</td></tr>
+          <tr><td>Khoảng 8 dòng trong chat · chi tiết nằm trong spec, commit và PR</td><td><code>S3 drop</code>: bỏ slice S3 · <code>F2</code>, <code>all</code>: xem chi tiết</td></tr>
         </tbody>
       </table>
     </div>
@@ -406,9 +406,9 @@ spec slice từng nhánh: điều kiện → kết quả,
         <tbody>
           <tr><td>Xong trong một session</td><td>không có · báo cáo + commit message</td><td>—</td></tr>
           <tr><td>G1 "có", xong trong một session</td><td>không có · ví dụ được duyệt ngay trong chat</td><td>—</td></tr>
-          <tr><td>G4: quá một session, hoặc chạy khi vắng mặt</td><td><code>spec.md</code> + <code>log.md</code> trong task folder</td><td>spec có mục Changes (REQ) · <code>status.json</code></td></tr>
+          <tr><td>G4: quá một session, hoặc chạy khi vắng mặt</td><td><code>spec.md</code> trong task folder</td><td>spec có mục Changes (REQ) · <code>status.json</code></td></tr>
           <tr><td>Chưa rõ thế nào là đúng</td><td><code>spec.md</code> ghi chuẩn đối chiếu (spec skill)</td><td>—</td></tr>
-          <tr><td>Yêu cầu tách thành nhiều slice (2.5)</td><td><code>map.md</code> trong một folder không có spec · mỗi slice một task folder riêng nằm cạnh, có <code>spec.md</code> + <code>log.md</code></td><td>mỗi slice có Changes và <code>status.json</code> riêng</td></tr>
+          <tr><td>Yêu cầu tách thành nhiều slice (2.5)</td><td><code>map.md</code> trong một folder không có spec · mỗi slice một task folder riêng nằm cạnh, có <code>spec.md</code></td><td>mỗi slice có Changes và <code>status.json</code> riêng</td></tr>
         </tbody>
       </table>
     </div>
@@ -418,13 +418,13 @@ spec slice từng nhánh: điều kiện → kết quả,
         <tbody>
           <tr><td><code>map.md</code> <span class="badge b-has">CÓ</span></td><td>Chỗ của từng slice trong toàn hệ thống</td><td>Trước slice đầu tiên, cập nhật khi mỗi slice xong</td><td>Claude viết · bạn duyệt một lần</td><td>Spec phình to · slice mất liên kết với hệ thống</td></tr>
           <tr><td><code>spec.md</code></td><td>Định nghĩa "đúng"</td><td>Trước khi làm</td><td>Claude viết · bạn duyệt (slice dưới map: chỉ khi G1)</td><td>Hiểu sai yêu cầu</td></tr>
-          <tr><td><code>log.md</code> <span class="badge b-has">CÓ</span></td><td>Ghi lại trạng thái, quyết định, bằng chứng</td><td>Mỗi cổng duyệt, cuối mỗi session</td><td>Claude viết · bạn và session sau đọc</td><td>Mất context · quyết định âm thầm</td></tr>
+          <tr><td>commit · PR</td><td>Ghi lại đã làm gì, vì sao, đã loại gì</td><td>Mỗi thay đổi một commit · PR khi xong</td><td>Claude viết · bạn duyệt PR, session sau đọc</td><td>Mất context · quyết định âm thầm</td></tr>
           <tr><td><code>status.json</code> <span class="badge b-has">CÓ</span> <small>lớp 2</small></td><td>Chặn</td><td>Sau khi chạy test</td><td><b>Script</b> sinh · Claude chỉ đọc</td><td>Claude tự nhận là xong</td></tr>
           <tr><td><code>lessons.md</code> <span class="badge b-has">CÓ</span></td><td>Học</td><td>Retro, khi có điều bất ngờ</td><td>Claude viết · tìm theo tag ở bước ②</td><td>Lặp lại lỗi cũ</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="two">
+    <div>
       <div>
         <div class="cap"><code>spec.md</code>: mẫu Spec trong communication, dạng generic</div>
 <pre># &lt;Tên task&gt;
@@ -440,24 +440,14 @@ spec slice từng nhánh: điều kiện → kết quả,
 ## Open questions   ai quyết
 ## Done when    một kiểm tra chạy được</pre>
       </div>
-      <div>
-        <div class="cap"><code>log.md</code>: mẫu Task log trong communication <span class="badge b-has">CÓ</span></div>
-<pre># Log: &lt;task&gt;   cập nhật: &lt;ngày giờ&gt; · S2 ✓ S3 ▶
-## Frame      mục đích · "đúng" · sai thì · ai duyệt
-## Context    đã xem · CHƯA xem
-## Decisions  quyết định (ai chốt, ngày)
-## Evidence   lệnh + kết quả, theo từng bước
-## Open       [todo] · [unverified]
-## Next       bước tiếp theo, đang chờ gì</pre>
-      </div>
     </div>
-    <div class="note"><b>Log ghi trạng thái, không ghi lại các bước đã làm.</b>"Tôi đọc file A rồi sửa B" là kiểu văn mà communication.md đã cấm. Log trả lời: đang ở đâu, đã chốt gì, ai chốt, đã chứng minh được gì, còn thiếu gì.</div>
+    <div class="note"><b>Không có file log riêng.</b>Session sau tiếp tục từ spec, các commit và PR; task có map thì dòng tiến độ (<code>S1 ✓ S2 ▶</code>) nằm ngay đầu map.</div>
     <div class="tablebox">
       <table>
         <thead><tr><th>Vai trò (places.md)</th><th>Mặc định</th></tr></thead>
         <tbody>
           <tr><td>work folder</td><td><code>.work/</code> ở gốc project, không bao giờ ở home · không có project thì hỏi</td></tr>
-          <tr><td>task folder · spec · task log</td><td><code>&lt;work folder&gt;/tasks/&lt;ngày&gt;-&lt;tên&gt;/</code> · <code>spec.md</code> · <code>log.md</code></td></tr>
+          <tr><td>task folder · spec</td><td><code>&lt;work folder&gt;/tasks/&lt;ngày&gt;-&lt;tên&gt;/</code> · <code>spec.md</code></td></tr>
           <tr><td>map</td><td><code>&lt;task folder&gt;/map.md</code> · slice ở folder cạnh nó: <code>&lt;ngày&gt;-&lt;tên&gt;-s1/</code>, <code>-s2/</code>…</td></tr>
           <tr><td>project lessons · personal lessons</td><td><code>&lt;work folder&gt;/lessons.md</code> · <code>~/.claude/lessons.md</code></td></tr>
           <tr><td>decision records</td><td>thư mục project đã có (<code>docs/adr/</code>, <code>docs/decisions/</code>…) · chưa có thì đề xuất <code>docs/decisions/</code> và chờ</td></tr>
@@ -473,7 +463,7 @@ spec slice từng nhánh: điều kiện → kết quả,
     <h3>2.7 Vòng học</h3>
     <p class="lead">Lấp lỗ hổng của quy tắc "Learning from repeats": mỗi session bắt đầu với trí nhớ trống, nên Claude cần một bản ghi sống lâu hơn từng task để biết một lỗi đã từng xảy ra.</p>
     <div class="flow">
-      <div class="fn l3"><code>log.md</code> của từng task (thô)</div>
+      <div class="fn l3">spec, commit và PR của từng task (thô)</div>
       <div class="fa">▼ <code>retro</code> <span class="badge b-has">CÓ</span>: chỉ giữ điều bất ngờ</div>
       <div class="fn l1">giả định sai · plan phải sửa · reviewer bắt lỗi · mutant sống sót · bạn phải sửa Claude</div>
       <div class="fa">▼ ghi vào</div>
@@ -595,7 +585,7 @@ spec slice từng nhánh: điều kiện → kết quả,
           <tr><td>Thiết kế</td><td>Decide</td><td>brief (Asking for a decision) · decision record</td><td><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>design-decision</code></td><td class="gate">◀ ADR</td></tr>
           <tr><td>STLC lập kế hoạch test</td><td>Deliver</td><td>Frame câu 3 → mức test</td><td><code>test-plan</code></td><td class="gate">◀ tiêu chí vào/ra</td></tr>
           <tr><td>STLC thiết kế test case</td><td>Deliver</td><td><code>verify-work</code>: property test · mutation</td><td><code>test-design</code> · <code>test-authoring</code> · <code>qa-foundations</code></td><td>—</td></tr>
-          <tr><td>Code</td><td>Deliver</td><td><code>task-spec</code> khi G4 · Plan mode · Stop hook · <code>log.md</code></td><td><code>backend</code> · <code>frontend</code> (web/mobile) · CLAUDE.md: lệnh</td><td class="gate">◀ plan hoặc map khi G2 · ◀ G3</td></tr>
+          <tr><td>Code</td><td>Deliver</td><td><code>task-spec</code> khi G4 · Plan mode · Stop hook</td><td><code>backend</code> · <code>frontend</code> (web/mobile) · CLAUDE.md: lệnh</td><td class="gate">◀ plan hoặc map khi G2 · ◀ G3</td></tr>
           <tr><td>STLC thực thi, báo lỗi</td><td>Deliver</td><td>quy tắc bằng chứng</td><td><code>test-execution</code> · <code>bug-report</code> · <code>qa-sweep</code> · <code>visual-review</code> · CI</td><td>—</td></tr>
           <tr><td>Review</td><td>—</td><td><code>review-work</code> · <code>reviewer</code></td><td>PR template</td><td class="gate">◀ PR</td></tr>
           <tr><td>STLC đóng test</td><td>—</td><td>check the checks</td><td><code>trace-check</code> · mutation</td><td class="gate">◀ rủi ro còn lại</td></tr>
@@ -656,13 +646,11 @@ spec slice từng nhánh: điều kiện → kết quả,
    ├─ tasks/             (commit vào git)
    │   ├─ 2026-10-coupon-stacking/
    │   │   ├─ spec.md       định nghĩa
-   │   │   ├─ log.md        ghi lại
    │   │   └─ status.json   chặn · .gitignore
    │   ├─ 2026-11-enrolment/
    │   │   └─ map.md        yêu cầu lớn · không spec
    │   ├─ 2026-11-enrolment-s1/
-   │   │   ├─ spec.md       slice · ## In the map
-   │   │   └─ log.md
+   │   │   └─ spec.md       slice · ## In the map
    │   └─ 2026-11-enrolment-s2/ …
    ├─ test-plans/
    ├─ incidents/
@@ -740,7 +728,7 @@ spec slice từng nhánh: điều kiện → kết quả,
         <div class="fn l1">② Context: tài liệu, bảng giá · lessons <code>#tts</code></div>
         <div class="fn l1">③ Agree: tiêu chí giá, chất lượng tiếng Việt, API · G1 trọng số tự đặt <span class="gate">◀</span> · G4 nhiều buổi → <code>spec.md</code></div>
         <div class="fn l1">④ Plan: G2, mỗi nhà cung cấp một bước <span class="gate">◀</span></div>
-        <div class="fn l1">⑤ Do: thử từng nhà cung cấp · <code>log.md</code>: đã thử Google, Azure, CHƯA thử FPT</div>
+        <div class="fn l1">⑤ Do: thử từng nhà cung cấp, mỗi bước báo một dòng: đã thử Google, Azure, CHƯA thử FPT</div>
         <div class="fn l1">⑥ Verify: mẫu audio, số liệu giá (bằng chứng) · brief kèm khuyến nghị</div>
         <div class="fn l1">⑦ Review: <code>review-work</code>, đối chiếu tiêu chí <span class="gate">◀</span></div>
         <div class="fn l1">⑧ Learn: bất ngờ "ElevenLabs sai dấu tiếng Việt" → lessons <code>#tts</code></div>
@@ -757,7 +745,7 @@ spec slice từng nhánh: điều kiện → kết quả,
         <div class="fn l1">③ Agree: G1 "cộng hay nhân %" <span class="gate">◀</span> · G4 → <code>task-spec</code> → <code>spec.md</code> có Changes</div>
         <div class="fn l2"><code>test-design</code>: biên 0%, 100%, coupon hết hạn</div>
         <div class="fn l1">④ Plan: G2, ba thay đổi → Plan mode <span class="gate">◀</span></div>
-        <div class="fn l1">⑤ Mỗi bước: test fail → code · G3 trước khi đổi schema đơn hàng <span class="gate">◀</span> · <code>log.md</code> cập nhật</div>
+        <div class="fn l1">⑤ Mỗi bước: test fail → code · G3 trước khi đổi schema đơn hàng <span class="gate">◀</span> · mỗi thay đổi một commit</div>
         <div class="fn mech">⑥ Stop hook · mutation (verify-work) · CI · <code>trace-check</code> → <code>status.json</code></div>
         <div class="fn l1">⑦ <code>reviewer</code>: thiếu ví dụ hoàn tiền một phần <span class="gate">◀</span></div>
         <div class="fn l3">báo cáo · cập nhật <code>docs/product/requirements/checkout.md</code></div>
@@ -805,6 +793,7 @@ spec slice từng nhánh: điều kiện → kết quả,
         <tr><td><span class="badge b-has">CÓ</span></td><td>24–29/10, từ lessons đã thăng cấp: test do subagent chỉ đọc spec viết · mỗi input có ví dụ hỏng, rỗng, nhỏ nhất, đứt kết nối (cả plan) · check chập chờn chạy 3 lần · dữ liệu đã lưu thì đọc theo đường ghi · sửa một rule thì tìm mọi rule cùng chủ đề · <code>parallel-agents</code> vào gói</td><td>1</td><td>—</td></tr>
         <tr><td><span class="badge b-has">CÓ</span></td><td>01/11: yêu cầu lớn thành map và slice (2.5) · G1 chỉ dừng cho giá trị user thấy · mỗi bước một dòng, không dừng · gom câu hỏi kèm đề xuất · báo cáo mở đầu <code>DONE | ASK n | BLOCKED</code> · hình mặc định là dòng trước → sau · mục Explaining rút từ 91 xuống 36 dòng · đã cài vào <code>~/.claude</code></td><td>1–2</td><td>—</td></tr>
         <tr><td><span class="badge b-has">CÓ</span></td><td>08/11: gộp Loop (STLC) và project-starter (multi-agent dev) vào một kit — 22 skill theo 4 module (shared · dev · qa · ops), <code>modules.json</code> · mỗi skill có "Start when" theo trạng thái · frontend tách web / mobile · <code>qa-sweep</code> chuyển từ lớp 1 xuống module qa · project-init cài theo module đã chọn</td><td>2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">CÓ</span></td><td>11/11: bỏ task log <code>log.md</code> · session sau tiếp tục từ spec, commit và PR · map giữ dòng tiến độ</td><td>1</td><td>—</td></tr>
         <tr><td>6</td><td>Chạy <b>một task thật</b> xuyên cả 3 lớp trong project TypeScript: một PR phải bị chặn, một PR phải qua</td><td>1–3</td><td>dùng thật</td></tr>
         <tr><td>7</td><td>Kiểm verify qua <b>cả một task</b>, từ ③ Agree đến ⑥ Verify: test bắt đầu thẳng ở ⑥ không biết G1, G2 đã "có" chưa</td><td>1</td><td>—</td></tr>
         <tr><td>8</td><td>Chạy <b>một yêu cầu thật 3–5 việc</b> theo map: đếm số lần dừng và số dòng mỗi báo cáo, so với ví dụ C</td><td>1</td><td>dùng thật</td></tr>
