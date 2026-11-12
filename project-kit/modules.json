@@ -1,0 +1,23 @@
+{
+  "_comment": "Which kit skills belong to which capability module. project-init reads this to install only the modules a project needs, and to build the copy SKIP list for the rest. A project installs `shared` plus every module it chose; choosing none installs no skills. Keep in sync with the skill folders under files/.claude/skills/.",
+  "shared": ["requirements", "requirement-review", "review-change", "security-foundations"],
+  "modules": {
+    "dev": {
+      "desc": "building to a contract: interface and data-model design, the design system, secure implementation, and recorded decisions",
+      "skills": ["design-decision", "solution-architecture", "api-contract", "design-system", "backend", "frontend", "frontend-web", "frontend-mobile"]
+    },
+    "qa": {
+      "desc": "requirements-driven testing: shared craft, case design, authoring, execution, triage, and a browser driver",
+      "skills": ["qa-foundations", "test-design", "test-authoring", "test-execution", "bug-report", "test-plan", "playwright-cli", "browser-run", "mobile-run", "visual-review", "qa-sweep"]
+    },
+    "ops": {
+      "desc": "shipping and incidents: release gating, blameless incident handling",
+      "skills": ["ops-foundations", "incident", "release"]
+    }
+  },
+  "platforms": {
+    "_comment": "frontend splits by target. The shared `frontend` installs with the dev module; project-init installs only the chosen platforms' delta skills and leaves the rest out, so a web project never carries the mobile rules.",
+    "web": ["frontend-web"],
+    "mobile": ["frontend-mobile"]
+  }
+}

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kiến trúc 3 lớp: SDLC và STLC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F6F7F9;
+    --panel: #FFFFFF;
+    --ink: #1B2233;
+    --muted: #5E6880;
+    --line: #D5DAE3;
+    --l1: #2F6FB3;      /* global */
+    --l1-bg: #EAF2FB;
+    --l2: #2E8A63;      /* project */
+    --l2-bg: #E7F5EE;
+    --l3: #9A5B12;      /* artifacts */
+    --l3-bg: #FBF1E3;
+    --gate: #C0392B;
+    --new: #7A3FB0;
+    --thread: #C98410;
+    --sans: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+      --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A;
+      --l3: #E3A95C; --l3-bg: #33261A; --gate: #F07A6C; --new: #C39AF0; --thread: #F0B44C;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #11151D; --panel: #1A202B; --ink: #E7EAF0; --muted: #9AA4B8; --line: #2F3848;
+    --l1: #7FB2E8; --l1-bg: #1A2A3F; --l2: #6FCB9E; --l2-bg: #16302A;
+    --l3: #E3A95C; --l3-bg: #33261A; --gate: #F07A6C; --new: #C39AF0; --thread: #F0B44C;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); padding-inline: 16px; padding-block: 28px 64px; }
+  .wrap { max-width: 1280px; margin-inline: auto; display: grid; gap: 40px; }
+  h1 { font-size: 1.7rem; margin: 0 0 6px; text-wrap: balance; }
+  h2 { font-size: 1.3rem; margin: 0 0 4px; }
+  h3 { font-size: 1rem; margin: 0 0 8px; }
+  p { margin: 0; max-width: 72ch; }
+  .lead { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  nav a { color: var(--ink); text-decoration: none; border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 5px 10px; font-size: .88rem; }
+  nav a:hover { border-color: var(--muted); }
+  a:focus-visible { outline: 2px solid var(--thread); outline-offset: 2px; }
+
+  /* ---- overview stack ---- */
+  .stack { display: grid; gap: 10px; }
+  .layer { border-radius: 6px; padding: 14px 16px; border: 1.5px solid; display: grid; grid-template-columns: 210px 1fr; gap: 6px 18px; align-items: start; }
+  .layer .tag { font-weight: 700; }
+  .layer .tag small { display: block; font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+  .layer ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .layer li { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; font-size: .86rem; }
+  .L1 { border-color: var(--l1); background: var(--l1-bg); } .L1 .tag { color: var(--l1); }
+  .L2 { border-color: var(--l2); background: var(--l2-bg); } .L2 .tag { color: var(--l2); }
+  .L3 { border-color: var(--l3); background: var(--l3-bg); } .L3 .tag { color: var(--l3); }
+  .arrow-between { text-align: center; color: var(--muted); font-family: var(--mono); font-size: .85rem; }
+  @media (max-width: 640px) { .layer { grid-template-columns: 1fr; } }
+
+  /* ---- naming table ---- */
+  .tablebox { overflow-x: auto; }
+  table.names { border-collapse: collapse; min-width: 640px; width: 100%; background: var(--panel); border: 1px solid var(--line); }
+  table.names th, table.names td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .9rem; }
+  table.names th { color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+
+  /* ---- lifecycle matrix ---- */
+  .matrix-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+  .matrix { display: grid; min-width: 1100px; }
+  .matrix.sdlc { grid-template-columns: 150px repeat(7, 1fr); }
+  .matrix.stlc { grid-template-columns: 150px repeat(6, 1fr); }
+  .cell { padding: 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: .84rem; display: grid; gap: 6px; align-content: start; }
+  .cell:last-child { border-right: none; }
+  .head { background: var(--bg); font-weight: 700; font-size: .88rem; position: relative; }
+  .head .purpose { font-weight: 400; font-family: var(--mono); font-size: .74rem; color: var(--muted); }
+  .rowhead { font-weight: 700; position: sticky; left: 0; z-index: 1; }
+  .rowhead small { display: block; font-weight: 400; font-size: .74rem; font-family: var(--mono); }
+  .r1 { background: var(--l1-bg); } .r1.rowhead { color: var(--l1); }
+  .r2 { background: var(--l2-bg); } .r2.rowhead { color: var(--l2); }
+  .r3 { background: var(--l3-bg); } .r3.rowhead { color: var(--l3); }
+  .item { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 4px 7px; line-height: 1.35; }
+  .item .mono { display: block; }
+  .badge { display: inline-block; font-size: .68rem; font-weight: 700; border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; letter-spacing: .02em; }
+  .b-new { color: var(--new); border: 1px solid var(--new); }
+  .b-ren { color: var(--l1); border: 1px solid var(--l1); }
+  .shared { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--thread); border: 1px solid var(--thread); border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+  .gate { color: var(--gate); font-weight: 700; font-size: .78rem; }
+  .gaterow { background: var(--panel); }
+  .gaterow.rowhead { color: var(--gate); }
+  .thread { background: var(--panel); font-family: var(--mono); font-size: .76rem; color: var(--thread); }
+  .thread.rowhead { font-family: var(--sans); font-size: .84rem; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: .85rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--thread); border-radius: 4px; padding: 12px 14px; font-size: .9rem; }
+  .note b { display: block; margin-bottom: 4px; }
+
+  /* ---- thread diagram ---- */
+  .threadline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-family: var(--mono); font-size: .82rem; }
+  .threadline .n { background: var(--panel); border: 1.5px solid var(--thread); border-radius: 4px; padding: 5px 9px; }
+  .threadline .a { color: var(--thread); }
+  .flowbox { display: grid; gap: 6px; max-width: 900px; }
+  .fnode { border: 1.5px solid var(--line); background: var(--panel); border-radius: 6px; padding: 10px 14px; font-size: .9rem; }
+  .fnode.in { border-style: dashed; color: var(--muted); }
+  .fnode.core { border-color: var(--l2); background: var(--l2-bg); display: grid; gap: 8px; }
+  .fnode.art { border-color: var(--l3); background: var(--l3-bg); }
+  .fnode.side { border-color: var(--l2); }
+  .lenses { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lens { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; font-size: .86rem; }
+  .lens b { display: block; }
+  .farrow { color: var(--muted); font-family: var(--mono); font-size: .82rem; padding-left: 18px; }
+  .split2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .lenses, .split2 { grid-template-columns: 1fr; } }
+  section { display: grid; gap: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Kiến trúc 3 lớp khi áp dụng vào SDLC và STLC</h1>
+    <p class="lead">Lớp 1 là khung chung dùng cho mọi task. Lớp 2 là phần riêng của từng project. Lớp 3 là các artifact nằm trong repo, được truyền từ giai đoạn này sang giai đoạn khác. Mã requirement (<code>REQ-…</code>) là sợi chỉ nối các artifact lại với nhau. Đây là góc nhìn theo ma trận SDLC và STLC, cập nhật 01/11/2026. Mọi thành phần trong trang đã được xây. Bản tổng hợp đầy đủ hơn là <code>kien-truc-tong-hop.html</code>.</p>
+    <nav>
+      <a href="#layers">Ba lớp</a>
+      <a href="#names">Ba loại "spec"</a>
+      <a href="#shared">Nút chung: phân tích yêu cầu</a>
+      <a href="#sdlc">SDLC</a>
+      <a href="#stlc">STLC</a>
+      <a href="#thread">Sợi chỉ REQ</a>
+    </nav>
+  </header>
+
+  <!-- ================= LAYERS ================= -->
+  <section id="layers">
+    <h2>Ba lớp</h2>
+    <div class="stack">
+      <div class="layer L1">
+        <div class="tag">Lớp 1 · Global<small>~/.claude/</small></div>
+        <ul>
+          <li><code>workflow.md</code>: 8 bước · 4 gate · map và slice · bằng chứng</li>
+          <li><code>communication.md</code>: mẫu báo cáo, plan, map, spec</li>
+          <li><code>places.md</code>: chỗ để file</li>
+          <li><code>task-spec</code></li>
+          <li><code>verify-work</code></li>
+          <li><code>review-work</code></li>
+          <li><code>retro</code></li>
+          <li><code>project-init</code></li>
+          <li><code>parallel-agents</code></li>
+          <li>subagent <code>reviewer</code></li>
+          <li>Stop hook <code>require_tests.py</code></li>
+          <li>Plan mode</li>
+          <li>deny <code>.env*</code> · attribution tắt</li>
+        </ul>
+      </div>
+      <div class="arrow-between">▲ project dùng lại lớp 1, không sửa nó</div>
+      <div class="layer L2">
+        <div class="tag">Lớp 2 · Project<small>repo/CLAUDE.md, repo/.claude/</small></div>
+        <ul>
+          <li><code>CLAUDE.md</code>: Test command, build/lint, kiến trúc, quy ước mã REQ</li>
+          <li>26 skill, 4 module · <code>modules.json</code> · project-init cài theo nhu cầu</li>
+          <li>shared: <code>requirements</code> <small>chung SDLC + STLC</small> · <code>requirement-review</code> · <code>review-change</code></li>
+          <li>dev: <code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>backend</code> · <code>frontend</code> <small>web/mobile</small> · <code>design-decision</code></li>
+          <li>qa: <code>qa-foundations</code> · <code>test-design</code> · <code>test-authoring</code> · <code>test-execution</code> · <code>bug-report</code> · <code>test-plan</code> · <code>visual-review</code> · <code>qa-sweep</code> · <code>playwright-cli</code></li>
+          <li>ops: <code>release</code> · <code>incident</code></li>
+          <li>CI: test · lint · <code>trace-check</code> · mutation</li>
+          <li>PR template · pre-commit</li>
+        </ul>
+      </div>
+      <div class="arrow-between">▲ tạo ra và đọc</div>
+      <div class="layer L3">
+        <div class="tag">Lớp 3 · Artifacts<small>repo/docs/product/, repo/.work/, tests/</small></div>
+        <ul>
+          <li><code>docs/product/requirements/</code> (sống mãi, mã REQ)</li>
+          <li><code>.work/tasks/</code> (task spec, log, lưu trữ sau khi merge)</li>
+          <li><code>docs/product/decisions/</code> (ADR)</li>
+          <li><code>.work/test-plans/</code></li>
+          <li>tests <code>test_REQ_…</code></li>
+          <li>ma trận truy vết</li>
+          <li><code>CHANGELOG</code></li>
+          <li><code>.work/incidents/</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= NAMES ================= -->
+  <section id="names">
+    <h2>Ba loại "spec", ba tên khác nhau</h2>
+    <p class="lead">Tách ra để mã không bị trùng: mã thuộc về requirement vì requirement tồn tại lâu dài, còn task spec chỉ tham chiếu mã đó.</p>
+    <div class="tablebox">
+      <table class="names">
+        <thead><tr><th>Tên</th><th>Mô tả</th><th>Vòng đời</th><th>Mã</th><th>Nơi lưu</th></tr></thead>
+        <tbody>
+          <tr><td><b>Requirement</b><br><small>skill <code>requirements</code></small></td><td>Hệ thống <em>phải làm gì</em>, trạng thái hiện tại</td><td>Sống mãi, cập nhật khi hành vi đổi</td><td>Sở hữu mã <code>REQ-CHECKOUT-012</code></td><td><code>docs/product/requirements/</code></td></tr>
+          <tr><td><b>Map</b><br><small>mẫu Map trong communication</small></td><td><em>Một yêu cầu lớn</em> tách thành slice: thứ tự, phụ thuộc, chạm vào đâu, câu hỏi cần quyết trước</td><td>Một yêu cầu, cập nhật khi mỗi slice xong</td><td>Liệt kê mã REQ mỗi slice chạm vào</td><td><code>.work/tasks/&lt;ngày&gt;-&lt;tên&gt;/map.md</code></td></tr>
+          <tr><td><b>Task spec</b><br><small>skill <code>task-spec</code></small></td><td><em>Lần thay đổi này</em>, hoặc một slice của map: phạm vi, file, ví dụ, cách kiểm tra xong</td><td>Một task, lưu trữ sau khi merge</td><td>Tham chiếu mã REQ</td><td><code>.work/tasks/&lt;ngày&gt;-&lt;tên&gt;/spec.md</code> · slice: <code>…-s1/spec.md</code></td></tr>
+          <tr><td><b>Test design / plan</b></td><td>Test cái gì, bằng kỹ thuật nào, tiêu chí vào và ra</td><td>Theo feature</td><td>Test mang mã REQ</td><td><code>.work/test-plans/</code>, tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SHARED ================= -->
+  <section id="shared">
+    <h2>Nút chung: phân tích yêu cầu</h2>
+    <p class="lead">SDLC và STLC đọc cùng một đầu vào, nên phân tích một lần với hai lăng kính, không tách thành hai hoạt động. Đầu ra chung là các ví dụ nghiệm thu: vừa là đích để dev xây, vừa là test case để QA kiểm. Đây là cách làm của Three Amigos trong BDD: PO, dev và QA cùng phân tích một lần.</p>
+    <div class="flowbox">
+      <div class="fnode in">PRD · ticket · trao đổi với PO</div>
+      <div class="farrow">▼</div>
+      <div class="fnode core"><div><b><code>requirements</code></b> · lớp 2</div>
+        <div class="lenses">
+          <div class="lens"><b>Lăng kính SDLC</b>đủ chưa? có mâu thuẫn không? làm được không?</div>
+          <div class="lens"><b>Lăng kính STLC</b>testable chưa? biên ở đâu? điều kiện test là gì?</div>
+        </div>
+        <small>Rule nào không viết được một ví dụ cụ thể là rule mơ hồ: hỏi lại, không tự đoán.</small>
+      </div>
+      <div class="farrow">▼ <span class="gate">◀ PO, dev, QA duyệt ví dụ</span></div>
+      <div class="fnode art"><span class="mono">docs/product/requirements/&lt;area&gt;.md</span> · REQ-CHECKOUT-012 + ví dụ nghiệm thu</div>
+      <div class="split2">
+        <div><div class="farrow">▼</div><div class="fnode side">SDLC: <code>task-spec</code> tham chiếu REQ → plan → code</div></div>
+        <div><div class="farrow">▼</div><div class="fnode side">STLC: <code>test-plan</code> → <code>test-design</code> từ cùng ví dụ</div></div>
+      </div>
+      <div class="farrow">▼ gặp nhau lại</div>
+      <div class="fnode art">test pass = requirement được đáp ứng · <code>trace-check</code> chứng minh</div>
+    </div>
+    <div class="tablebox">
+      <table class="names">
+        <thead><tr><th>Ranh giới</th><th><code>requirements</code></th><th><code>task-spec</code></th></tr></thead>
+        <tbody>
+          <tr><td>Trả lời</td><td>Hệ thống phải làm gì</td><td>Lần thay đổi này làm gì, ở đâu, xong khi nào</td></tr>
+          <tr><td>Khi nào dùng</td><td>Có yêu cầu mới hoặc yêu cầu đổi, kể cả khi chưa có task nào</td><td>Khi việc kéo dài quá một session (G4), hoặc chưa rõ thế nào là đúng</td></tr>
+          <tr><td>Mã REQ</td><td>Tạo mới, giữ ổn định</td><td>Chỉ tham chiếu. REQ chưa có thì gọi <code>requirements</code> trước</td></tr>
+          <tr><td>Kết thúc</td><td>Requirement được duyệt</td><td>Code, test xong và requirement đã được cập nhật</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= SDLC ================= -->
+  <section id="sdlc">
+    <h2>1. SDLC: ba lớp theo từng giai đoạn</h2>
+    <p class="lead">Mỗi giai đoạn ứng với một mục đích trong Frame the task. Làm theo vòng nhỏ cho từng feature, không làm waterfall cho cả dự án.</p>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--l1);background:var(--l1-bg)"></i>Lớp 1 global</span>
+      <span><i class="sw" style="border-color:var(--l2);background:var(--l2-bg)"></i>Lớp 2 project</span>
+      <span><i class="sw" style="border-color:var(--l3);background:var(--l3-bg)"></i>Lớp 3 artifact</span>
+      <span><b class="gate">◀</b> người duyệt</span>
+    </div>
+    <div class="matrix-scroll">
+      <div class="matrix sdlc">
+        <div class="cell head rowhead" style="background:var(--bg)"></div>
+        <div class="cell head">Yêu cầu <span class="shared">⇄ chung STLC</span><div class="purpose">Deliver: spec</div></div>
+        <div class="cell head">Thiết kế<div class="purpose">Decide</div></div>
+        <div class="cell head">Code<div class="purpose">Deliver: steps</div></div>
+        <div class="cell head">Test<div class="purpose">Deliver: verify</div></div>
+        <div class="cell head">Review<div class="purpose">review-work</div></div>
+        <div class="cell head">Release<div class="purpose">Irreversible</div></div>
+        <div class="cell head">Vận hành<div class="purpose">Restore · Learn</div></div>
+
+        <!-- gates -->
+        <div class="cell gaterow rowhead">Cổng duyệt</div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt ví dụ nghiệm thu</span></div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt ADR</span></div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt plan, hoặc map một lần, khi G2 (Plan mode)</span><br><span class="gate">◀ G3 trước bước khó hoàn tác</span></div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow"><span class="gate">◀ người review PR</span></div>
+        <div class="cell gaterow"><span class="gate">◀ trước bước khó hoàn tác (G3)</span></div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt postmortem</span></div>
+
+        <!-- L1 -->
+        <div class="cell r1 rowhead">Lớp 1<small>global</small></div>
+        <div class="cell r1"><div class="item"><code>task-spec</code></div><div class="item">Frame: "đúng" là gì</div></div>
+        <div class="cell r1"><div class="item">Frame: Decide</div><div class="item">brief (Asking for a decision)</div></div>
+        <div class="cell r1"><div class="item">workflow: bước, test trước, gate G2, G3</div><div class="item">map → slice, mỗi bước một dòng</div><div class="item">Plan mode</div><div class="item">Stop hook</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: gồm cả mutation</div></div>
+        <div class="cell r1"><div class="item"><code>review-work</code></div><div class="item">subagent <code>reviewer</code></div></div>
+        <div class="cell r1"><div class="item">Frame: Irreversible (dry-run, rollback, hỏi)</div></div>
+        <div class="cell r1"><div class="item">Frame: Restore, Learn</div><div class="item">Learning from repeats</div></div>
+
+        <!-- L2 -->
+        <div class="cell r2 rowhead">Lớp 2<small>project</small></div>
+        <div class="cell r2"><div class="item"><code>requirements</code><br><small>PRD, ticket → REQ + ví dụ, hai lăng kính</small></div><div class="item">CLAUDE.md: quy ước mã REQ, link tới tool quản lý ticket</div></div>
+        <div class="cell r2"><div class="item"><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code><br><small>cấu trúc, hợp đồng interface/dữ liệu, token UI</small></div><div class="item"><code>design-decision</code> <small>khi cần</small></div></div>
+        <div class="cell r2"><div class="item"><code>backend</code> · <code>frontend</code> <small>web/mobile</small><br><small>code theo hợp đồng</small></div><div class="item">CLAUDE.md: Test command, build, lint · pre-commit</div></div>
+        <div class="cell r2"><div class="item">bộ skill STLC (xem phần 2)</div><div class="item">CI</div></div>
+        <div class="cell r2"><div class="item">PR template</div><div class="item">CI: required checks</div></div>
+        <div class="cell r2"><div class="item"><code>release</code></div><div class="item">CI/CD, feature flag</div></div>
+        <div class="cell r2"><div class="item"><code>incident</code></div><div class="item">monitoring, alert</div></div>
+
+        <!-- L3 -->
+        <div class="cell r3 rowhead">Lớp 3<small>artifact</small></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/requirements/</span>mã REQ + ví dụ</div><div class="item"><span class="mono">.work/tasks/…/spec.md</span></div></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/decisions/</span>ADR</div></div>
+        <div class="cell r3"><div class="item">code + tests <span class="mono">test_REQ_…</span></div><div class="item">commit nhắc mã REQ</div></div>
+        <div class="cell r3"><div class="item">kết quả CI</div><div class="item">ma trận truy vết</div></div>
+        <div class="cell r3"><div class="item">PR, review findings</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">CHANGELOG</span>release notes, plan rollback</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">.work/incidents/</span>dòng thời gian, postmortem</div><div class="item">→ check mới (test, lint, hook)</div></div>
+
+        <!-- thread -->
+        <div class="cell thread rowhead">Sợi chỉ REQ</div>
+        <div class="cell thread">REQ-CHECKOUT-012 được tạo</div>
+        <div class="cell thread">ADR nhắc REQ-012</div>
+        <div class="cell thread">test_REQ_CHECKOUT_012_…</div>
+        <div class="cell thread">trace-check: REQ-012 ✓ có test</div>
+        <div class="cell thread">reviewer đối chiếu REQ-012</div>
+        <div class="cell thread">CHANGELOG: REQ-012</div>
+        <div class="cell thread">sự cố → REQ-012 thiếu case → test mới</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STLC ================= -->
+  <section id="stlc">
+    <h2>2. STLC: ba lớp theo từng giai đoạn</h2>
+    <p class="lead">STLC chen vào SDLC ở giai đoạn Yêu cầu, trước khi viết code: test được thiết kế từ ví dụ nghiệm thu, rồi code mới được viết để làm test pass.</p>
+    <div class="legend">
+      <span><i class="sw" style="border-color:var(--l1);background:var(--l1-bg)"></i>Lớp 1 global</span>
+      <span><i class="sw" style="border-color:var(--l2);background:var(--l2-bg)"></i>Lớp 2 project</span>
+      <span><i class="sw" style="border-color:var(--l3);background:var(--l3-bg)"></i>Lớp 3 artifact</span>
+      <span><b class="gate">◀</b> người duyệt</span>
+    </div>
+    <div class="matrix-scroll">
+      <div class="matrix stlc">
+        <div class="cell head rowhead" style="background:var(--bg)"></div>
+        <div class="cell head">Phân tích yêu cầu <span class="shared">⇄ chung SDLC</span><div class="purpose">testable chưa?</div></div>
+        <div class="cell head">Lập kế hoạch test<div class="purpose">theo rủi ro</div></div>
+        <div class="cell head">Thiết kế test case<div class="purpose">kỹ thuật</div></div>
+        <div class="cell head">Môi trường, dữ liệu<div class="purpose">chạy thật trên bản sao</div></div>
+        <div class="cell head">Thực thi, báo lỗi<div class="purpose">bằng chứng</div></div>
+        <div class="cell head">Đóng test<div class="purpose">tiêu chí ra</div></div>
+
+        <!-- gates -->
+        <div class="cell gaterow rowhead">Cổng duyệt</div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt ví dụ</span></div>
+        <div class="cell gaterow"><span class="gate">◀ duyệt tiêu chí vào, ra</span><br><small>release, feature lớn, thay đổi rủi ro</small></div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow">—</div>
+        <div class="cell gaterow"><span class="gate">◀ chấp nhận rủi ro còn lại</span></div>
+
+        <!-- L1 -->
+        <div class="cell r1 rowhead">Lớp 1<small>global</small></div>
+        <div class="cell r1"><div class="item"><code>task-spec</code>: fresh-session test</div><div class="item">Frame câu 2: "đúng" là gì</div></div>
+        <div class="cell r1"><div class="item">Frame câu 3: cái giá của sai lầm → mức test</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: test từ ví dụ, property test, context khác</div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: chạy thật trên bản sao</div></div>
+        <div class="cell r1"><div class="item">Stop hook</div><div class="item">quy tắc bằng chứng, <code>[unverified]</code></div></div>
+        <div class="cell r1"><div class="item"><code>verify-work</code>: check the checks, mutation</div><div class="item"><code>review-work</code></div></div>
+
+        <!-- L2 -->
+        <div class="cell r2 rowhead">Lớp 2<small>project</small></div>
+        <div class="cell r2"><div class="item"><code>requirements</code><br><small>cùng skill với cột Yêu cầu của SDLC: lăng kính "testable chưa?"</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-plan</code><br><small>tầng test, phần tự động, tiêu chí vào và ra</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-design</code><br><small>phân vùng tương đương · giá trị biên · decision table · state transition · pairwise</small></div><div class="item"><code>test-authoring</code> · <code>qa-foundations</code> <small>nền QA chung</small></div></div>
+        <div class="cell r2"><div class="item">CLAUDE.md: fixture, seed, môi trường test</div><div class="item"><code>playwright-cli</code> <small>lái trình duyệt thật</small></div></div>
+        <div class="cell r2"><div class="item"><code>test-execution</code> · <code>bug-report</code></div><div class="item"><code>qa-sweep</code> · <code>visual-review</code> <small>đo app đang chạy</small></div><div class="item">CI chạy test</div></div>
+        <div class="cell r2"><div class="item"><code>trace-check</code><br><small>script CI: fail khi có REQ chưa có test</small></div><div class="item">CI: mutation trên file rủi ro bị sửa</div></div>
+
+        <!-- L3 -->
+        <div class="cell r3 rowhead">Lớp 3<small>artifact</small></div>
+        <div class="cell r3"><div class="item"><span class="mono">docs/product/requirements/</span>mã REQ + ví dụ</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">.work/test-plans/&lt;feature&gt;.md</span></div></div>
+        <div class="cell r3"><div class="item">test case <span class="mono">test_REQ_…</span></div><div class="item">decision table, state diagram</div></div>
+        <div class="cell r3"><div class="item"><span class="mono">fixtures/</span>seed data</div></div>
+        <div class="cell r3"><div class="item">kết quả CI</div><div class="item">bug report (tham chiếu mã REQ)</div></div>
+        <div class="cell r3"><div class="item">ma trận REQ → test → kết quả</div><div class="item">báo cáo mutation</div></div>
+
+        <!-- thread -->
+        <div class="cell thread rowhead">Sợi chỉ REQ</div>
+        <div class="cell thread">REQ-012: 3 ví dụ, 1 cái `assumed`</div>
+        <div class="cell thread">REQ-012: rủi ro cao (tiền) → unit + e2e</div>
+        <div class="cell thread">giá trị biên: 0%, 100%, 2 coupon</div>
+        <div class="cell thread">seed: coupon hết hạn hôm qua</div>
+        <div class="cell thread">BUG-88 → REQ-012 · biên 100%</div>
+        <div class="cell thread">REQ-012: 5 test ✓ · mutation 92%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= THREAD ================= -->
+  <section id="thread">
+    <h2>Sợi chỉ REQ nối SDLC và STLC</h2>
+    <p class="lead">Mã requirement đi qua mọi artifact, nên câu hỏi "requirement này đã có test chưa, đã lên release nào" trở thành câu hỏi mà một script trả lời được.</p>
+    <div class="threadline">
+      <span class="n">requirement<br>REQ-CHECKOUT-012</span><span class="a">→</span>
+      <span class="n">task spec<br>Changes: REQ-012 (mới)</span><span class="a">→</span>
+      <span class="n">test plan / design<br>biên, decision table</span><span class="a">→</span>
+      <span class="n">test<br>test_REQ_CHECKOUT_012_…</span><span class="a">→</span>
+      <span class="n">commit / PR<br>"REQ-012: …"</span><span class="a">→</span>
+      <span class="n">trace-check<br>REQ-012 ✓</span><span class="a">→</span>
+      <span class="n">release<br>CHANGELOG</span><span class="a">→</span>
+      <span class="n">sự cố<br>BUG-88 → REQ-012</span>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Task chỉ xong khi requirement được cập nhật.</b>Task spec ghi REQ nào được thêm hoặc sửa. Bước "Done when" gồm việc sửa file requirement, để tài liệu không lệch dần khỏi code.</div>
+      <div class="note"><b>Cơ chế mạnh nhất ở lớp 2 là CI.</b>CI chạy độc lập với Claude, trên mọi PR, kể cả code do người viết. Stop hook chỉ là chốt chặn sớm trong lúc làm.</div>
+      <div class="note"><b>Cả 7 skill lớp 2 đã xây.</b>Chúng nằm trong <code>project-kit/</code> của gói, cài vào repo bằng <code>project-init</code>. Chưa qua task thật nào: bước tiếp theo là một PR phải bị chặn và một PR phải qua trong project TypeScript.</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

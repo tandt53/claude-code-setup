@@ -1,0 +1,15 @@
+{
+  "_note": "Authoritative grading cases. The agent sees task.md and fixture/test_slugify.py (public only); hidden cases are what a thorough fix handles but the task does not spell out.",
+  "module": "slugify.py",
+  "function": "slugify",
+  "public": [
+    ["Hello, World!", "hello-world"]
+  ],
+  "hidden": [
+    ["!!!Wow", "wow"],
+    ["@#$", ""],
+    ["  a   b  ", "a-b"],
+    ["Node.js 20!", "node-js-20"],
+    ["already-a-slug", "already-a-slug"]
+  ]
+}

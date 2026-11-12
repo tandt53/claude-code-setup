@@ -1,0 +1,13 @@
+{
+  "name": "project-kit",
+  "private": true,
+  "description": "The kit's own tests. Beside files/, so project-init never copies it into a project.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0",
+    "typescript": "5.9.3"
+  }
+}

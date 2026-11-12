@@ -1,0 +1,6 @@
+[
+  { "ref": "REQ-CHECKOUT-012 ex3", "status": "pass", "by": "Lan", "date": "2026-10-01",
+    "evidence": ".work/test-runs/shots/2026-10-01-checkout-ex3.png", "note": "Chrome 129, staging" },
+  { "ref": "REQ-CHECKOUT-005 ex2", "status": "fail", "by": "Lan", "date": "2026-10-01",
+    "evidence": "bug SHOP-352" }
+]

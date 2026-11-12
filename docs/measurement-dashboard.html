@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measurement Trend</title>
+<meta name="description" content="Trend view for the measurement history: each metric's movement over time, from measurement/history.py snapshots.">
+<style>
+  :root{
+    --bg:#090c13; --panel:#0f1420; --card:#141b2b; --fg:#e8edf6; --muted:#8b97ad;
+    --line:#1e2636; --line2:#2a3650; --good:#34d399; --bad:#fb7185; --flat:#8b97ad; --accent:#2dd4ee;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font-family:'Sora',system-ui,sans-serif}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+  .wrap{max-width:1200px;margin:0 auto;padding:22px 16px 48px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  h1{font-size:21px;margin:0;font-weight:600}
+  .sub{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:12px;margin-top:4px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px;margin-top:18px}
+  .card{background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:14px}
+  .card .nm{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg)}
+  .card .dir{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+  .card .val{font-size:26px;font-weight:600;margin-top:6px}
+  .card .delta{font-family:'JetBrains Mono',monospace;font-size:12px;margin-left:8px}
+  .up{color:var(--good)} .down{color:var(--bad)} .flat{color:var(--flat)}
+  svg{display:block;margin-top:10px;width:100%;height:46px}
+  .pts{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px}
+  details{margin-top:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:10px 14px}
+  summary{cursor:pointer;font-size:13px;color:var(--muted)}
+  textarea{width:100%;height:150px;margin-top:10px;background:#0b0f18;color:var(--fg);border:1px solid var(--line2);
+    border-radius:8px;padding:10px;font-family:'JetBrains Mono',monospace;font-size:11px}
+  button{margin-top:8px;background:var(--accent);color:#06202a;border:0;border-radius:7px;padding:7px 14px;font-weight:600;cursor:pointer}
+  .empty{color:var(--muted);font-size:13px;margin-top:20px}
+  .tiny{color:var(--muted);font-size:10.5px;margin-top:20px;font-family:'JetBrains Mono',monospace;text-align:center}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Sora:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Measurement Trend</h1>
+      <div class="sub">movement over time &middot; from measurement/history.py snapshots &middot; sample data below</div>
+    </div>
+  </header>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No numeric metrics in the history. Paste a history.json below.</div>
+
+  <details>
+    <summary>Load your own history.json (paste &amp; render)</summary>
+    <textarea id="ta" placeholder='[{"date":"2026-11-08","proven_pct":0.9,"rework_rate":0.3}, ...]'></textarea>
+    <button id="load">Render</button>
+  </details>
+  <div class="tiny">direction (higher = better?) is known for named metrics, neutral otherwise &middot; a trend needs several dates &middot; no single metric (P1)</div>
+</div>
+
+<script>
+// Sample history: replace by pasting a real measurement/history.py file below.
+const SAMPLE=[
+  {date:'2026-10-18', proven_pct:0.62, rework_rate:0.41, trajectory_mean:3.4, honesty_pass_rate:0.80, defect_escape:0.14, cost_output_k:2100},
+  {date:'2026-10-25', proven_pct:0.71, rework_rate:0.38, trajectory_mean:3.8, honesty_pass_rate:0.85, defect_escape:0.11, cost_output_k:1950},
+  {date:'2026-11-01', proven_pct:0.78, rework_rate:0.37, trajectory_mean:4.1, honesty_pass_rate:0.90, defect_escape:0.08, cost_output_k:1870},
+  {date:'2026-11-08', proven_pct:0.87, rework_rate:0.33, trajectory_mean:4.3, honesty_pass_rate:0.92, defect_escape:0.05, cost_output_k:1914},
+];
+// higher is better = +1, lower is better = -1, unknown = 0
+const DIR={proven_pct:1, honesty_pass_rate:1, trajectory_mean:1, gate_value_mean:1,
+  rework_rate:-1, defect_escape:-1, cost_output_k:-1, assumed_pct:-1, orphans:-1, problems:-1};
+
+function fmt(v){ if(v===null||v===undefined) return '-'; if(Number.isInteger(v)) return String(v);
+  return Math.abs(v)<1 ? v.toFixed(2) : v.toLocaleString(); }
+
+function spark(series){
+  const vals=series.map(s=>s.v);
+  const min=Math.min(...vals), max=Math.max(...vals), span=(max-min)||1;
+  const n=series.length, W=220, H=40, pad=4;
+  const pts=series.map((s,i)=>{
+    const x=pad + (n===1?0:i*(W-2*pad)/(n-1));
+    const y=H-pad - (s.v-min)/span*(H-2*pad);
+    return [x,y];
+  });
+  const line=pts.map(p=>p.join(',')).join(' ');
+  const dots=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2" fill="currentColor"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${line}" fill="none" stroke="currentColor" stroke-width="1.5"/>${dots}</svg>`;
+}
+
+function render(history){
+  const grid=document.getElementById('grid'), empty=document.getElementById('empty');
+  grid.innerHTML='';
+  const rows=[...history].filter(r=>r&&r.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const keys=new Set();
+  rows.forEach(r=>Object.keys(r).forEach(k=>{ if(k!=='date'&&typeof r[k]==='number') keys.add(k); }));
+  if(!keys.size){ empty.hidden=false; return; } empty.hidden=true;
+  [...keys].sort().forEach(k=>{
+    const series=rows.filter(r=>typeof r[k]==='number').map(r=>({d:r.date,v:r[k]}));
+    if(!series.length) return;
+    const last=series[series.length-1].v, prev=series.length>1?series[series.length-2].v:null;
+    const dir=DIR[k]||0;
+    let dcls='flat', dtxt='';
+    if(prev!==null){
+      const diff=last-prev;
+      dtxt=(diff>=0?'+':'')+fmt(Number(diff.toFixed(4)));
+      const better = dir===0 ? 0 : Math.sign(diff)*dir;
+      dcls = better>0?'up':(better<0?'down':'flat');
+    }
+    const dirlabel = dir>0?'higher better':dir<0?'lower better':'neutral';
+    const card=document.createElement('div');card.className='card';
+    card.innerHTML=`<div class="nm">${k}</div><div class="dir">${dirlabel}</div>
+      <div><span class="val">${fmt(last)}</span><span class="delta ${dcls}">${dtxt}</span></div>
+      <div class="${dcls}">${spark(series)}</div>
+      <div class="pts">${series.length} pts · ${series[0].d} → ${series[series.length-1].d}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+render(SAMPLE);
+document.getElementById('load').addEventListener('click',()=>{
+  try{ render(JSON.parse(document.getElementById('ta').value)); }
+  catch(e){ alert('Invalid JSON: '+e.message); }
+});
+</script>
+</body>
+</html>

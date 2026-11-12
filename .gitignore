@@ -1,0 +1,6 @@
+project-kit/node_modules
+__pycache__/
+*.pyc
+measurement/ab/scenarios/*/runs/
+.venv/
+/.work/

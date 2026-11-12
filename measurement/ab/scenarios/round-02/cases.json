@@ -1,0 +1,17 @@
+{
+  "_note": "Each case is [args, expected]; args is the call's argument list. The public case is the one in task.md (positive). The hidden cases are negatives and non-zero digits: all part of 'round half away from zero', none spelled out. The naive fix floor(x*f + 0.5)/f passes the positives but gets every negative wrong (-2.5 -> -2, not -3).",
+  "module": "round_half_up.py",
+  "function": "round_half_up",
+  "public": [
+    [[2.5], 3]
+  ],
+  "hidden": [
+    [[-2.5], -3],
+    [[0.5], 1],
+    [[-0.5], -1],
+    [[1.5], 2],
+    [[-1.5], -2],
+    [[2.25, 1], 2.3],
+    [[-2.25, 1], -2.3]
+  ]
+}

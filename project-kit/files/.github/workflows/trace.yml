@@ -1,0 +1,87 @@
+# Runs the tests, then trace-check: which requirement examples are proven.
+# - Any failing test fails the run, on every pull request and on main, whether
+#   or not the PR touches a task.
+# - On a pull request: every task folder the PR touches must be proven (blocks).
+# - On main: every active requirement is reported (does not block; see the summary).
+# Edit the test commands to match the project (Vitest shown; Jest and Playwright below).
+
+name: trace
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Unit / integration → reports/unit.xml. A failing test fails this step and
+      # the run; the steps below still run (!cancelled) so trace-check reports
+      # each example.
+      - name: Unit tests
+        run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=reports/unit.xml
+        # Jest instead (needs the jest-junit package):
+        #   run: npx jest --ci --reporters=default --reporters=jest-junit
+        #   env: { JEST_JUNIT_OUTPUT_FILE: reports/unit.xml }
+
+      # End to end → reports/e2e.xml (remove this step if there are no e2e tests)
+      # - name: E2E tests
+      #   if: ${{ !cancelled() }}
+      #   run: npx playwright install --with-deps && npx playwright test --reporter=junit
+      #   env: { PLAYWRIGHT_JUNIT_OUTPUT_FILE: reports/e2e.xml }
+
+      - name: Collect inputs
+        id: inputs
+        if: ${{ !cancelled() }}
+        run: |
+          args=""
+          for f in reports/unit.xml reports/e2e.xml; do
+            [ -f "$f" ] && args="$args --results $(basename "$f" .xml)=$f"
+          done
+          for f in .work/test-runs/*.json; do
+            case "$(basename "$f")" in _*) continue;; esac
+            [ -f "$f" ] && args="$args --manual $f"
+          done
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      - name: Trace-check the tasks in this pull request
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: |
+          tasks=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+                  | grep '^\.work/tasks/[^/]*/spec\.md$' | xargs -r -n1 dirname | sort -u)
+          if [ -z "$tasks" ]; then echo "No task spec changed in this PR."; exit 0; fi
+          status=0
+          for t in $tasks; do
+            echo "::group::$t"
+            node scripts/trace-check.mjs ${{ steps.inputs.outputs.args }} --task "$t" || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Trace-check every requirement (report only)
+        if: ${{ !cancelled() && github.event_name == 'push' }}
+        continue-on-error: true
+        run: |
+          node scripts/trace-check.mjs ${{ steps.inputs.outputs.args }} --out reports/status.json \
+            | tee reports/trace.txt
+          { echo '```'; cat reports/trace.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            reports/
+            .work/tasks/*/status.json

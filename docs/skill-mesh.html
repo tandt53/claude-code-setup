@@ -1,0 +1,237 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>SDLC Skill Pipeline</title>
+<style>
+  /* Layout: a landscape SDLC pipeline — phases flow left→right as columns, skills
+     stacked as module-colored cards, ▶ connectors between, detail panel below.
+     Committed dark theme. */
+  :root{
+    --bg:#090c13; --panel:#0f1420; --panel2:#111827; --card:#141b2b;
+    --line:#1d2740; --line2:#2b3850;
+    --fg:#e9eef8; --muted:#8a99b4; --dim:#5c6d89;
+    --shared:#2dd4ee; --dev:#a78bfa; --qa:#34d399; --ops:#f6b24a; --gate:#fb7185;
+    color-scheme:dark;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ui:"Sora",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--fg);font-family:var(--ui);-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 640px at 12% -8%,#132141 0%,transparent 55%),
+               radial-gradient(900px 500px at 100% 0,#1a1226 0%,transparent 48%),var(--bg);}
+  .wrap{max-width:1600px;margin:0 auto;padding-block:18px 28px;
+    padding-left:max(16px,env(safe-area-inset-left,0px));
+    padding-right:max(16px,env(safe-area-inset-right,0px));}
+
+  header.top{display:flex;align-items:center;gap:13px 18px;flex-wrap:wrap;margin-bottom:16px}
+  .logo{width:34px;height:34px;border-radius:9px;flex:none;
+    background:conic-gradient(from 130deg,#2dd4ee,#a78bfa,#34d399,#f6b24a,#2dd4ee);
+    box-shadow:0 0 0 1px #2a3650 inset,0 0 20px -5px #5b8bff}
+  h1{font-size:20px;font-weight:600;margin:0;letter-spacing:.2px;line-height:1.1}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:2px}
+  .stats{margin-left:auto;display:flex;gap:16px;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+  .stat b{font-family:var(--mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.9px}
+
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:16px;
+    background:linear-gradient(180deg,#0c1017,#0a0d14);padding:16px 10px 18px;
+    box-shadow:inset 0 1px 0 #ffffff08,0 18px 46px -30px #000}
+  .pipeline{display:flex;align-items:flex-start;width:max-content;margin:0 auto;min-width:100%;justify-content:center}
+  .pcol{flex:none;width:198px;display:flex;flex-direction:column;gap:8px;padding:0 4px}
+  .pcol-h{min-height:52px;margin-bottom:3px}
+  .ph-top{display:flex;align-items:center;gap:7px}
+  .ph-no{font-family:var(--mono);font-size:10px;color:var(--pc);border:1px solid var(--pc);
+    border-radius:5px;padding:1px 6px;letter-spacing:.5px}
+  .ph-name{font-size:12.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--pc)}
+  .ph-note{font-size:10.5px;color:var(--dim);margin-top:3px;line-height:1.35}
+
+  .card{display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left;width:100%;
+    background:var(--card);border:1px solid var(--line2);border-left:3px solid var(--c);
+    border-radius:9px;padding:8px 10px;transition:transform .1s,box-shadow .1s,border-color .1s}
+  .card .dot{width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 9px -1px var(--c);flex:none}
+  .card .nm{font-family:var(--mono);font-size:11.5px;line-height:1.25;color:var(--fg);word-break:break-word}
+  .card.base{border-left-style:dashed;background:#101826}
+  .card.base .nm{color:var(--muted)}
+  /* platform deltas align flush like every other card */
+  .card:hover{transform:translateY(-1px);border-color:var(--c);box-shadow:0 0 22px -8px var(--c)}
+  .card.sel{border-color:var(--c);box-shadow:0 0 0 1px var(--c) inset,0 0 24px -6px var(--c)}
+
+  .hconn{flex:none;width:52px;display:flex;flex-direction:column;align-items:center;
+    padding-top:4px;color:var(--dim)}
+  .harrow{display:flex;align-items:center}
+  .harrow .ln{width:34px;height:2px;background:linear-gradient(90deg,var(--line2),var(--dim))}
+  .harrow .tri{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;
+    border-left:8px solid var(--dim)}
+  .hconn.gate{width:52px}
+  .hconn.gate .harrow .ln{background:var(--gate)}
+  .hconn.gate .harrow .tri{border-left-color:var(--gate)}
+  .hconn .lab{font-family:var(--mono);font-size:9px;text-align:center;line-height:1.3;color:var(--muted)}
+  .hconn.gate .lab{color:var(--gate)}
+
+  .xcut{margin-top:16px;border:1px dashed var(--line2);border-radius:12px;padding:11px 14px;
+    display:flex;gap:11px;align-items:flex-start;background:#0b0f1a}
+  .xcut .dot{width:9px;height:9px;border-radius:50%;background:var(--shared);margin-top:4px;flex:none;
+    box-shadow:0 0 9px -1px var(--shared);cursor:pointer}
+  .xcut b{font-family:var(--mono);font-size:12px;color:var(--shared);cursor:pointer}
+  .xcut p{margin:2px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+
+  .panel{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px 16px 16px}
+  .p-badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;
+    text-transform:uppercase;letter-spacing:1px;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--c);color:var(--c);background:color-mix(in oklab,var(--c) 12%,transparent)}
+  .p-grid{display:grid;grid-template-columns:1fr;gap:12px 22px;margin-top:11px}
+  @media(min-width:720px){.p-grid{grid-template-columns:1.3fr 1fr 1fr 1fr}}
+  .p-name{font-family:var(--mono);font-size:16px;font-weight:600;margin:9px 0 1px;overflow-wrap:anywhere}
+  .p-tag{font-size:11.5px;color:var(--muted)}
+  .p-row h4{margin:0 0 3px;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .p-row p{margin:0;font-size:12.5px;line-height:1.5}
+  .p-row .start{color:#c7ecff}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .chip{font-family:var(--mono);font-size:10.5px;padding:3px 8px;border-radius:7px;border:1px solid var(--line2);
+    color:var(--muted);cursor:pointer;background:#0d1320}
+  .chip:hover{color:var(--fg)}
+  .intro{display:flex;flex-wrap:wrap;gap:16px 26px;align-items:flex-start}
+  .intro .txt{flex:1 1 340px;min-width:0}
+  .intro p{font-size:12.5px;line-height:1.55;color:var(--muted);margin:0 0 8px}
+  .intro b{color:var(--fg)}
+  .legend{display:flex;flex-direction:column;gap:7px}
+  .legend .md{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:6px;border:1px solid var(--c);color:var(--c);display:inline-block}
+  .legend .lg{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  .legend .sw{width:20px;border-top:2px solid var(--muted)}
+  .legend .sw.gate{border-color:var(--gate)}
+  .foot{text-align:center;color:var(--dim);font-size:11px;font-family:var(--mono);margin-top:16px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="logo"></div>
+    <div>
+      <h1>SDLC Skill Pipeline</h1>
+      <div class="sub">project-kit · 22 skills · installed per project</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>22</b><span>skills</span></div>
+      <div class="stat"><b>6</b><span>phases</span></div>
+      <div class="stat"><b>4</b><span>modules</span></div>
+    </div>
+  </header>
+
+  <div class="scroll"><div class="pipeline" id="pipeline"></div></div>
+
+  <div class="xcut">
+    <span class="dot" data-go="review-change"></span>
+    <div><b data-go="review-change">review-change</b>
+      <p>Cross-cutting, any phase: when an upstream artifact you built against changes, it finds what of yours is now silently wrong — and which still-green tests are lying.</p></div>
+  </div>
+
+  <div class="panel" id="panel"></div>
+  <div class="foot">a map of the kit, not live telemetry · click any skill for detail</div>
+</div>
+
+<script>
+const MOD={shared:'--shared',dev:'--dev',qa:'--qa',ops:'--ops'};
+const S={}; const def=o=>{S[o.id]=o;return o};
+const PHASES=[
+  {no:'01',name:'Requirements',pc:'--shared',note:'the rule + concrete examples',skills:['requirements','requirement-review']},
+  {no:'02',name:'Design',pc:'--dev',note:'how it is built, the contracts',skills:['solution-architecture','api-contract','design-system','design-decision']},
+  {no:'03',name:'Build',pc:'--dev',note:'code to the contract',skills:['backend','frontend','frontend-web','frontend-mobile']},
+  {no:'04',name:'Test',pc:'--qa',note:'from the same examples, not the code',skills:['qa-foundations','test-design','test-authoring','test-execution','bug-report','visual-review','qa-sweep','test-plan','playwright-cli']},
+  {no:'05',name:'Release',pc:'--ops',note:'prove, back up, roll back, ship',skills:['release']},
+  {no:'06',name:'Operate',pc:'--ops',note:'mitigate first, then the fix',skills:['incident']},
+];
+// connector labels between phase i and i+1
+const CONN=[
+  {l:'examples feed\nboth tracks'},
+  {l:'contracts:\ndata · UI'},
+  {l:'built code\nis run'},
+  {l:'trace-check ✓\ntest ↔ example\nor blocked',gate:1},
+  {l:'threshold\n→ roll back'},
+];
+def({id:'requirements',mod:'shared',start:'A request, ticket, bug or test gap names a behaviour to specify.',reads:'request · area file · lessons',makes:'a requirement + concrete examples',hands:['requirement-review']});
+def({id:'requirement-review',mod:'shared',start:'A requirement exists and something is about to build or test from it.',reads:'requirement + examples',makes:'ranked open questions + a readiness verdict',hands:['solution-architecture','test-design']});
+def({id:'review-change',mod:'shared',start:'An upstream artifact you built against changed — needs the diff.',reads:'the diff + what you built',makes:'what is silently wrong · which green tests lie',hands:[]});
+def({id:'solution-architecture',mod:'dev',start:'A feature adds or changes structure (components, pattern, stack).',reads:'requirement',makes:'components · patterns · stack · what must not break',hands:['api-contract']});
+def({id:'api-contract',mod:'dev',start:'A requirement exists and the components it spans are known.',reads:'requirement · architecture',makes:'interface shapes · data model · migrations',hands:['backend','test-design']});
+def({id:'design-system',mod:'dev',start:'A project has or is growing a UI.',reads:'requirement states',makes:'tokens · components+states · stable test-ids',hands:['frontend']});
+def({id:'design-decision',mod:'dev',start:'A choice is expensive to reverse or later work builds on it.',reads:'options + criteria',makes:'an append-only decision record (ADR)',hands:[]});
+def({id:'backend',mod:'dev',start:'An agreed interface contract exists for what you build.',reads:'api-contract',makes:'layered server code + tests — secure, no leaks',hands:['test-execution']});
+def({id:'frontend',mod:'dev',start:'The visual contract and the data contract for the screen exist.',reads:'design-system · api-contract',makes:'UI code — every state, a11y, shared security',hands:['visual-review']});
+def({id:'frontend-web',mod:'dev',plat:1,start:'The target is a web UI.',reads:'frontend',makes:'browser deltas — CSP · SSR · bundle secrets · responsive',hands:[]});
+def({id:'frontend-mobile',mod:'dev',plat:1,start:'The target is a mobile app.',reads:'frontend',makes:'device deltas — Keychain · gesture · offline · permissions',hands:[]});
+def({id:'qa-foundations',mod:'qa',base:1,start:'Loaded by any QA skill — the shared craft, not triggered alone.',reads:'—',makes:'trust hierarchy · AC quality · locators · rationalizations',hands:[]});
+def({id:'test-design',mod:'qa',start:'An agreed requirement with concrete examples exists.',reads:'requirement examples',makes:'test cases + the level for each · 9 techniques',hands:['test-authoring']});
+def({id:'test-authoring',mod:'qa',start:'Designed test cases exist for the behaviour.',reads:'cases · helpers · contract',makes:'executable test bodies named for each example',hands:['test-execution']});
+def({id:'test-execution',mod:'qa',start:'Runnable cases exist and an environment to run them.',reads:'cases · env',makes:'verdicts (pass/fail/flaky/inconcl.) + run record',hands:['bug-report']});
+def({id:'bug-report',mod:'qa',start:'A failing test or defect, and an example to measure it against.',reads:'failure + example',makes:'classified bug (flake/script/product/test-case) + failing test',hands:['test-authoring']});
+def({id:'visual-review',mod:'qa',start:'A rendered UI to judge and an instrument to measure it.',reads:'a screen / render',makes:'measured findings — never an estimate',hands:[]});
+def({id:'qa-sweep',mod:'qa',start:'Need to know if features actually work — a running app to drive.',reads:'the running app, not its source',makes:'measured findings of what a person really gets → failing tests',hands:['bug-report']});
+def({id:'test-plan',mod:'qa',start:'Testing spans several tasks, people, or a risky release.',reads:'the scope',makes:'scope · risks · levels · entry/exit criteria',hands:[]});
+def({id:'playwright-cli',mod:'qa',start:'A task needs to drive a real browser (Playwright stack).',reads:'the running app',makes:'live observations · verified selectors',hands:[]});
+def({id:'incident',mod:'ops',start:'Something users depend on is broken or degraded right now.',reads:'signals · timeline',makes:'reversible mitigation + blameless postmortem',hands:['bug-report']});
+def({id:'release',mod:'ops',start:'A change is ready to ship to a shared environment.',reads:'scope · evidence',makes:'gated release — proof, backup, rollback, smoke',hands:[]});
+
+const cv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const pipe=document.getElementById('pipeline'); const cardEl={};
+PHASES.forEach((ph,i)=>{
+  const col=document.createElement('div'); col.className='pcol'; col.style.setProperty('--pc',cv(ph.pc));
+  const h=document.createElement('div'); h.className='pcol-h';
+  h.innerHTML=`<div class="ph-top"><span class="ph-no">${ph.no}</span><span class="ph-name">${ph.name}</span></div>
+    <div class="ph-note">${ph.note}</div>`;
+  col.appendChild(h);
+  ph.skills.forEach(id=>{
+    const s=S[id]; const el=document.createElement('button');
+    el.className='card'+(s.plat?' plat':'')+(s.base?' base':'');
+    el.style.setProperty('--c',cv(MOD[s.mod]));
+    el.innerHTML=`<span class="dot"></span><span class="nm">${id}</span>`;
+    el.addEventListener('click',()=>select(id)); col.appendChild(el); cardEl[id]=el;
+  });
+  pipe.appendChild(col);
+  if(i<PHASES.length-1){
+    const c=CONN[i]||{}; const hc=document.createElement('div');
+    hc.className='hconn'+(c.gate?' gate':'');
+    hc.innerHTML=`<div class="harrow"><div class="ln"></div><div class="tri"></div></div>`;
+    pipe.appendChild(hc);
+  }
+});
+
+let sel=null;
+function select(id){
+  const s=S[id]; if(!s) return; sel=id;
+  Object.values(cardEl).forEach(e=>e.classList.remove('sel'));
+  if(cardEl[id]) cardEl[id].classList.add('sel');
+  const c=cv(MOD[s.mod]); const p=document.getElementById('panel'); p.style.setProperty('--c',c);
+  const hands=(s.hands&&s.hands.length)
+    ?`<div class="chips">${s.hands.map(h=>`<span class="chip" data-go="${h}">${h} ↗</span>`).join('')}</div>`
+    :`<p style="color:var(--dim)">— routes back / stands alone</p>`;
+  p.innerHTML=`<span class="p-badge">${s.mod}${s.plat?' · platform':s.base?' · base':''}</span>
+    <div class="p-name">${id}</div><div class="p-tag">reads its input, however produced</div>
+    <div class="p-grid">
+      <div class="p-row"><h4>▶ Start when</h4><p class="start">${s.start}</p></div>
+      <div class="p-row"><h4>Reads</h4><p>${s.reads}</p></div>
+      <div class="p-row"><h4>Produces</h4><p>${s.makes}</p></div>
+      <div class="p-row"><h4>Hands to</h4>${hands}</div>
+    </div>`;
+  p.querySelectorAll('[data-go]').forEach(ch=>ch.addEventListener('click',()=>select(ch.dataset.go)));
+}
+document.querySelectorAll('.xcut [data-go]').forEach(e=>e.addEventListener('click',()=>select(e.dataset.go)));
+
+(function intro(){
+  const p=document.getElementById('panel'); p.style.setProperty('--c',cv('--shared'));
+  p.innerHTML=`<div class="intro">
+    <div class="txt">
+      <span class="p-badge">the kit</span>
+      <div class="p-name" style="font-size:15px;margin-top:9px">How it reads</div>
+      <p>Left to right is the SDLC. One <b>requirement</b> with examples feeds both the <b>DEV</b> build (phases 2–3) and the <b>QA</b> tests (phase 4) — drawn from the same examples, in parallel.</p>
+      <p>Each card is a skill, coloured by module. Only the skills a project chose are installed, and only the one a task triggers loads. <b>qa-foundations</b> is the shared QA base; <b>trace-check</b> (the red link) is the hard gate: no test without an example, or the release is blocked.</p>
+    </div>
+    <div class="legend">
+      <span class="md" style="--c:var(--shared)">shared · 3</span>
+      <span class="md" style="--c:var(--dev)">dev · 8</span>
+      <span class="md" style="--c:var(--qa)">qa · 9</span>
+      <span class="md" style="--c:var(--ops)">ops · 2</span>
+      <div class="lg" style="margin-top:4px"><span class="sw"></span> flow</div>
+      <div class="lg"><span class="sw gate"></span> trace-check gate</div>
+    </div>
+  </div>
+  <div class="foot" style="margin-top:12px;text-align:left">Click a skill for its Start-when, inputs, outputs and hand-offs.</div>`;
+})();
+</script>
