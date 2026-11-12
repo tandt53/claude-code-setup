@@ -7,8 +7,9 @@ on-demand skills, a layer-2 kit of 26 project skills in four modules, the
 mechanisms that enforce what must not be skipped, and where work is recorded
 so it can be resumed and learned from.
 
-Start with `architecture/kien-truc-tong-hop.html` (in Vietnamese): the whole
-design, from the three layers down to each file, with examples.
+Start with `architecture/kien-truc-tong-hop.html` (in Vietnamese; open it in a
+browser after cloning): the whole design, from the three layers down to each
+file, with examples.
 
 ```
 ~/.claude/                          LAYER 1 · global, every task
@@ -31,6 +32,7 @@ design, from the three layers down to each file, with examples.
 ├─ hooks/require_tests.py           Stop hook: tests must run after code edits
 ├─ hooks/after_compact.py           after a compaction: reload skills, keep the language
 ├─ hooks/gap_question.py            on a "là gì / why" message: explain another way, reopen the pick
+├─ hooks/measure_session.py         Stop hook: session metrics (runs measurement/crawl.py)
 ├─ settings.json                    + the hook entries, .env deny rules,
 │                                   attribution off
 └─ lessons.md                       lessons about how Claude works (grows by use)
@@ -46,7 +48,7 @@ design, from the three layers down to each file, with examples.
                                     LAYER 3 · artifacts in the same repo
 ├─ docs/product/                    the system as it is: requirements, test-cases,
 │                                   architecture, decisions
-└─ .work/                           the work: tasks/<date>-<name>/{spec,log,status},
+└─ .work/                           the work: tasks/<date>-<name>/{spec,status},
                                     test-plans, test-runs, releases, incidents, lessons.md
 ```
 
@@ -95,7 +97,7 @@ flowchart TB
 
   subgraph L3["Layer 3 · files in the repo, reviewed via PR"]
     direction LR
-    A1["docs/product/requirements<br/>REQ-CHECKOUT-012 ex1..3"] --> A2["docs/product/test-cases<br/>one case per example"] --> A3["tests<br/>'REQ-CHECKOUT-012 ex1: …'"] --> A4[".work/tasks/‹task›/<br/>spec · log · status.json"]
+    A1["docs/product/requirements<br/>REQ-CHECKOUT-012 ex1..3"] --> A2["docs/product/test-cases<br/>one case per example"] --> A3["tests<br/>'REQ-CHECKOUT-012 ex1: …'"] --> A4[".work/tasks/‹task›/<br/>spec · status.json"]
     A5[".work/lessons.md<br/>read by the next task<br/>a repeat becomes a check"]
   end
 
@@ -118,9 +120,11 @@ flowchart TB
 
 ## Install
 
-From this folder:
+Needs Claude Code, Python 3 and Node.js (tested with Python 3.13 and Node 22).
 
 ```bash
+git clone https://github.com/tandt53/claude-code-setup.git
+cd claude-code-setup
 mkdir -p ~/.claude/prompts ~/.claude/skills ~/.claude/agents ~/.claude/hooks ~/.claude/measurement
 cp prompts/*.md ~/.claude/prompts/
 cp -r skills/* ~/.claude/skills/
@@ -141,12 +145,7 @@ touch ~/.claude/lessons.md
    ```
 2. **`~/.claude/settings.json`**: merge in `settings.snippet.json`, keeping
    any hooks and permission rules you already have.
-3. **Skills**: if you saved skills from claude.ai review cards, keep one copy
-   of each in Claude Code. Remove any old `spec`, `verify` or `review` skills
-   from earlier versions: they are now `task-spec`, `verify-work`,
-   `review-work`. Remove `~/.claude/skills/mutation-check` too: its procedure
-   now lives in the verify skill (Check the checks) and the workflow's Do step.
-4. **Each project**: its CLAUDE.md (or AGENTS.md) gets these lines. Claude
+3. **Each project**: its CLAUDE.md (or AGENTS.md) gets these lines. Claude
    adds them when it creates or updates the file.
    ```markdown
    Test command: `npm test`
@@ -163,8 +162,17 @@ touch ~/.claude/lessons.md
    put the work, the lessons or the decision records elsewhere: the global
    files and skills follow CLAUDE.md, and their paths are only defaults.
    With `project-kit/`, keep `.work/`: `trace.yml` reads `.work/tasks/`.
-5. Remove any output style from earlier setups (Task Reporting,
-   Communication) so the rules are not loaded twice.
+
+### Upgrading from an earlier copy
+
+- If you saved skills from claude.ai review cards, keep one copy of each in
+  Claude Code.
+- Remove any old `spec`, `verify` or `review` skills: they are now
+  `task-spec`, `verify-work`, `review-work`. Remove
+  `~/.claude/skills/mutation-check` too: its procedure now lives in the verify
+  skill (Check the checks) and the workflow's Do step.
+- Remove any output style from earlier setups (Task Reporting, Communication)
+  so the rules are not loaded twice.
 
 ## Check it works
 

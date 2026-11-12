@@ -12,7 +12,7 @@ Test command: `npm test`
   - `docs/product/architecture/`: how the system is built
   - `docs/product/decisions/NNNN-<name>.md`: decision records, only added, never edited
 - **Work** (how it got that way; one folder per piece of work):
-  - `.work/tasks/<yyyy-mm-dd>-<name>/`: `spec.md`, `log.md`, `status.json` (generated);
+  - `.work/tasks/<yyyy-mm-dd>-<name>/`: `spec.md`, `status.json` (generated);
     a split request keeps `map.md` there instead, its slices in `<yyyy-mm-dd>-<name>-s1/`, `-s2/`…
   - `.work/test-plans/`, `.work/test-runs/`, `.work/releases/`, `.work/incidents/`
   - `.work/lessons.md`: this project's lessons
