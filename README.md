@@ -46,7 +46,7 @@ design, from the three layers down to each file, with examples.
                                     LAYER 3 · artifacts in the same repo
 ├─ docs/product/                    the system as it is: requirements, test-cases,
 │                                   architecture, decisions
-└─ .work/                           the work: tasks/<date>-<name>/{spec,log,status},
+└─ .work/                           the work: tasks/<date>-<name>/{spec,status},
                                     test-plans, test-runs, releases, incidents, lessons.md
 ```
 
@@ -95,7 +95,7 @@ flowchart TB
 
   subgraph L3["Layer 3 · files in the repo, reviewed via PR"]
     direction LR
-    A1["docs/product/requirements<br/>REQ-CHECKOUT-012 ex1..3"] --> A2["docs/product/test-cases<br/>one case per example"] --> A3["tests<br/>'REQ-CHECKOUT-012 ex1: …'"] --> A4[".work/tasks/‹task›/<br/>spec · log · status.json"]
+    A1["docs/product/requirements<br/>REQ-CHECKOUT-012 ex1..3"] --> A2["docs/product/test-cases<br/>one case per example"] --> A3["tests<br/>'REQ-CHECKOUT-012 ex1: …'"] --> A4[".work/tasks/‹task›/<br/>spec · status.json"]
     A5[".work/lessons.md<br/>read by the next task<br/>a repeat becomes a check"]
   end
 
