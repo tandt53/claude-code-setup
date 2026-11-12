@@ -7,9 +7,9 @@ on-demand skills, a layer-2 kit of 26 project skills in four modules, the
 mechanisms that enforce what must not be skipped, and where work is recorded
 so it can be resumed and learned from.
 
-Start with `architecture/overview.html` (in Vietnamese; open it in a
-browser after cloning): the whole design, from the three layers down to each
-file, with examples.
+Start with `architecture/overview.html` (open it in a browser after
+cloning): the whole design, from the three layers down to each file, with
+examples.
 
 ```
 ~/.claude/                          LAYER 1 · global, every task

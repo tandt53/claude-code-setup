@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kiến trúc làm việc với Claude</title>
+<title>Architecture of working with Claude</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -144,76 +144,76 @@
 <div class="wrap">
 
 <header>
-  <div class="eyebrow">Tổng hợp · cập nhật 01/11/2026</div>
-  <h1>Kiến trúc làm việc với Claude</h1>
-  <p class="lead">Đi từ tổng quan xuống từng lớp. Lớp 1 là khung chung cho mọi task. Lớp 2 là phần riêng cho phát triển phần mềm (SDLC, STLC). Lớp 3 là các file nằm trong repo.</p>
+  <div class="eyebrow">Overview · updated 1 Nov 2026</div>
+  <h1>Architecture of working with Claude</h1>
+  <p class="lead">From the overview down to each layer. Layer 1 is the shared frame for every task. Layer 2 is the part specific to software development (SDLC, STLC). Layer 3 is the files that live in the repo.</p>
   <div class="legend" style="margin-top:10px">
-    <span><span class="badge b-has">CÓ</span> đã có trong gói <code>claude-code-setup</code></span>
-    <span><span class="badge b-new">MỚI</span> đề xuất, chưa xây (nay không còn mục nào)</span>
-    <span><span class="gate">◀</span> người duyệt</span>
+    <span><span class="badge b-has">BUILT</span> already in the <code>claude-code-setup</code> package</span>
+    <span><span class="badge b-new">NEW</span> proposed, not built (no items left now)</span>
+    <span><span class="gate">◀</span> approver</span>
   </div>
   <nav class="toc">
-    <a href="#overview">1. Tổng quan</a>
-    <a href="#layer1">2. Lớp 1 · Global</a>
-    <a href="#layer2">3. Lớp 2 · Project</a>
-    <a href="#layer3">4. Lớp 3 · Artifact</a>
-    <a href="#example">5. Ví dụ đầu cuối</a>
-    <a href="#status">6. Hiện trạng</a>
+    <a href="#overview">1. Overview</a>
+    <a href="#layer1">2. Layer 1 · Global</a>
+    <a href="#layer2">3. Layer 2 · Project</a>
+    <a href="#layer3">4. Layer 3 · Artifact</a>
+    <a href="#example">5. End-to-end example</a>
+    <a href="#status">6. Status</a>
   </nav>
 </header>
 
 <!-- =================================================== 1 -->
 <section id="overview">
-  <div class="eyebrow">Phần 1</div>
-  <h2>Tổng quan kiến trúc</h2>
+  <div class="eyebrow">Part 1</div>
+  <h2>Architecture overview</h2>
 
   <div class="hl">
     <div class="layers">
       <div class="layer L1">
-        <div class="name">Lớp 1 · Global: cách làm việc</div>
-        <div class="where">~/.claude/ · dùng cho mọi task, mọi project</div>
-        <div class="what">Workflow 8 bước, 4 gate · chia yêu cầu lớn thành map và slice · cách viết · chỗ để file · skill chung (hợp đồng, kiểm chứng (gồm mutation), review, retro, chạy nhiều agent song song, dò web app trên trình duyệt thật) · cơ chế ép buộc · bài học về cách Claude làm việc</div>
+        <div class="name">Layer 1 · Global: how we work</div>
+        <div class="where">~/.claude/ · used for every task, every project</div>
+        <div class="what">8-step workflow, 4 gates · split a large request into a map and slices · how to write · where files go · shared skills (contract, verification (including mutation), review, retro, running agents in parallel, probing a web app in a real browser) · enforcement mechanisms · lessons about how Claude works</div>
       </div>
-      <div class="between">▲ project dùng lại lớp 1, không sửa nó</div>
+      <div class="between">▲ a project reuses layer 1 and does not change it</div>
       <div class="layer L2">
-        <div class="name">Lớp 2 · Project: chuyên môn của lĩnh vực</div>
+        <div class="name">Layer 2 · Project: domain expertise</div>
         <div class="where">repo/CLAUDE.md · repo/.claude/ · CI</div>
-        <div class="what">Với phần mềm: kit 26 skill theo 4 module (shared · dev · qa · ops), project-init cài theo nhu cầu · CI và trace-check · bài học về domain</div>
+        <div class="what">For software: a kit of 26 skills in 4 modules (shared · dev · qa · ops), installed by project-init as needed · CI and trace-check · lessons about the domain</div>
       </div>
-      <div class="between">▲ tạo ra và đọc</div>
+      <div class="between">▲ creates and reads</div>
       <div class="layer L3">
-        <div class="name">Lớp 3 · Artifact: bộ nhớ nằm trong repo</div>
-        <div class="where">repo/docs/product/ · repo/.work/ · tests/ · mặc định, project đổi được</div>
-        <div class="what">sản phẩm: requirement · test case · ADR · test · changelog <br>công việc: spec · status của task · test plan · incident · lessons</div>
+        <div class="name">Layer 3 · Artifact: memory that lives in the repo</div>
+        <div class="where">repo/docs/product/ · repo/.work/ · tests/ · defaults, a project can change them</div>
+        <div class="what">product: requirement · test case · ADR · test · changelog <br>work: spec · task status · test plan · incident · lessons</div>
       </div>
     </div>
     <div class="principle">
       <div class="q">Instructions for judgment; mechanisms for enforcement.</div>
-      <div class="row"><b>Chữ (prompt, skill)</b>cho việc cần phán đoán: đóng khung task, giải thích, review, quyết định</div>
-      <div class="row"><b>Cơ chế (hook, CI, Plan mode)</b>cho việc không được bỏ qua: duyệt trước khi code, test phải chạy, requirement phải có test</div>
-      <div class="row"><b>Giới hạn</b>Cơ chế chỉ ép được điều máy kiểm tra được. Mỗi cơ chế phải từng được thấy chặn một lần mới được tin.</div>
+      <div class="row"><b>Instructions (prompt, skill)</b>for work that needs judgment: framing a task, explaining, review, deciding</div>
+      <div class="row"><b>Mechanisms (hook, CI, Plan mode)</b>for work that must not be skipped: approval before code, tests must run, a requirement must have tests</div>
+      <div class="row"><b>Limit</b>A mechanism can only enforce what a machine can check. Each mechanism is trusted only after it has been seen to block once.</div>
     </div>
   </div>
 
   <div class="sub">
-    <h3>Vòng đời của một task: 8 bước, giống nhau cho mọi task</h3>
+    <h3>The life of a task: 8 steps, the same for every task</h3>
 <pre>① Frame ─→ ② Context ─→ ③ Agree ─→ ④ Plan ─→ ⑤ Do ─→ ⑥ Verify ─→ ⑦ Review ─→ ⑧ Learn
                         ◀ G1       ◀ G2      ◀ G3                ◀
-                        G4: file   map khi   mỗi bước một dòng,
-                                   nhiều     không dừng
-                                   slice
+                        G4: file   map when  one line per step,
+                                   many      no stop
+                                   slices
      ▲                                                                         │
-     └───── bài học đã thăng cấp thành rule hoặc check, dùng cho task sau ─────┘</pre>
-    <p class="lead">Nội dung mỗi bước thay đổi theo mục đích của task (giao, tìm hiểu, khôi phục, quyết định), nhưng khung thì không đổi. Dừng ở đâu do 4 gate quyết (2.4). Cỡ yêu cầu chỉ quyết một điều: có tách thành nhiều slice hay không (2.5). Mỗi slice lại đi đủ 8 bước.</p>
+     └───── lessons promoted to a rule or check, used by later tasks ──────────┘</pre>
+    <p class="lead">What each step contains changes with the purpose of the task (deliver, learn, restore, decide), but the frame does not. The 4 gates decide where to stop (2.4). The size of a request decides only one thing: whether to split it into several slices (2.5). Each slice goes through all 8 steps.</p>
   </div>
 
   <div class="sub">
-    <h3>Bốn mục đích của việc ghi lại</h3>
+    <h3>Four purposes of keeping records</h3>
     <div class="purposes">
-      <div class="purpose"><span class="k">Định nghĩa</span>"Đúng" là gì, trước khi làm<span class="f">spec.md · requirement</span></div>
-      <div class="purpose"><span class="k">Ghi lại</span>Trạng thái và quyết định, để tiếp tục và kiểm tra lại<span class="f">spec.md · commit · PR</span></div>
-      <div class="purpose"><span class="k">Chặn</span>Không cho báo xong khi chưa có bằng chứng<span class="f">status.json · hook · CI</span></div>
-      <div class="purpose"><span class="k">Học</span>Điều bất ngờ gặp lần 2 thì thành rule hoặc check<span class="f">lessons.md</span></div>
+      <div class="purpose"><span class="k">Define</span>What "correct" is, before the work<span class="f">spec.md · requirement</span></div>
+      <div class="purpose"><span class="k">Record</span>State and decisions, to resume and to check again<span class="f">spec.md · commit · PR</span></div>
+      <div class="purpose"><span class="k">Block</span>No reporting done without evidence<span class="f">status.json · hook · CI</span></div>
+      <div class="purpose"><span class="k">Learn</span>A surprise seen a second time becomes a rule or a check<span class="f">lessons.md</span></div>
     </div>
   </div>
 </section>
@@ -222,48 +222,48 @@
 
 <!-- =================================================== 2 -->
 <section id="layer1">
-  <div class="eyebrow">Phần 2</div>
-  <h2>Lớp 1 · Global: cách làm việc cho mọi task</h2>
-  <p class="lead">Áp dụng cho viết code, viết tài liệu, nghiên cứu, làm video, phân tích dữ liệu. Không có gì trong lớp này giả định task là phần mềm, trừ Stop hook (xem 2.8). Workflow chỉ là hướng dẫn: không ghi đường dẫn, tên file hay tên skill. Đường dẫn nằm trong <code>places.md</code>, còn skill được gọi theo việc nó làm.</p>
+  <div class="eyebrow">Part 2</div>
+  <h2>Layer 1 · Global: how we work, for every task</h2>
+  <p class="lead">Applies to writing code, writing documents, research, making video, data analysis. Nothing in this layer assumes the task is software, except the Stop hook (see 2.8). The workflow is only a guide: it names no path, file or skill. Paths live in <code>places.md</code>, and a skill is called by what it does.</p>
 
   <!-- 2.1 -->
   <div class="sub">
-    <h3>2.1 Thành phần</h3>
+    <h3>2.1 Components</h3>
     <div class="cards">
       <div class="card l1">
-        <h4>Luôn nạp</h4>
+        <h4>Always loaded</h4>
         <ul>
-          <li><code>workflow.md</code> <span class="badge b-has">CÓ</span><br><small>hard rules · 8 bước · 4 gate · nhánh lỗi · context. Không đường dẫn, không tên skill</small></li>
-          <li><code>communication.md</code> <span class="badge b-has">CÓ</span><br><small>cách viết · hình mặc định là dòng trước → sau · mẫu báo cáo, plan, map, brief, spec, review, bài học · mã trả lời <code>ok</code>, <code>Q2 b</code></small></li>
-          <li><code>places.md</code> <span class="badge b-has">CÓ</span><br><small>chỗ để mặc định của mỗi file · project ghi đè được (2.6)</small></li>
+          <li><code>workflow.md</code> <span class="badge b-has">BUILT</span><br><small>hard rules · 8 steps · 4 gates · failure branches · context. No paths, no skill names</small></li>
+          <li><code>communication.md</code> <span class="badge b-has">BUILT</span><br><small>how to write · the default picture is a before → after line · shapes for report, plan, map, brief, spec, review, lesson · reply codes <code>ok</code>, <code>Q2 b</code></small></li>
+          <li><code>places.md</code> <span class="badge b-has">BUILT</span><br><small>default place of each file · a project can override it (2.6)</small></li>
         </ul>
       </div>
       <div class="card l1">
-        <h4>Skill, nạp khi cần</h4>
+        <h4>Skills, loaded on demand</h4>
         <ul>
-          <li><code>task-spec</code> <span class="badge b-has">CÓ</span> hợp đồng khi việc kéo dài quá một session, hoặc chưa rõ thế nào là đúng</li>
-          <li><code>verify-work</code> <span class="badge b-has">CÓ</span> kiểm chứng độc lập</li>
-          <li><code>review-work</code> <span class="badge b-has">CÓ</span> review theo 4 câu hỏi</li>
-          <li><code>retro</code> <span class="badge b-has">CÓ</span> điều bất ngờ → lessons</li>
-          <li><code>project-init</code> <span class="badge b-has">CÓ</span> dò rồi cài lớp 2 vào repo</li>
-          <li><code>parallel-agents</code> <span class="badge b-has">CÓ</span> chia việc lớn cho nhiều agent chạy song song, mỗi agent một thư mục</li>
+          <li><code>task-spec</code> <span class="badge b-has">BUILT</span> the contract, when work runs past one session or "correct" is unclear</li>
+          <li><code>verify-work</code> <span class="badge b-has">BUILT</span> independent verification</li>
+          <li><code>review-work</code> <span class="badge b-has">BUILT</span> review by 4 questions</li>
+          <li><code>retro</code> <span class="badge b-has">BUILT</span> a surprise → lessons</li>
+          <li><code>project-init</code> <span class="badge b-has">BUILT</span> probe, then install layer 2 into a repo</li>
+          <li><code>parallel-agents</code> <span class="badge b-has">BUILT</span> split a large job among agents running in parallel, one folder per agent</li>
         </ul>
       </div>
       <div class="card mech">
-        <h4>Cơ chế ép buộc</h4>
+        <h4>Enforcement mechanisms</h4>
         <ul>
-          <li>Plan mode <span class="badge b-has">CÓ</span> cổng duyệt</li>
-          <li>subagent <code>reviewer</code> <span class="badge b-has">CÓ</span> context mới</li>
-          <li>Stop hook <span class="badge b-has">CÓ</span> test phải chạy <small>(thực chất của lớp 2)</small></li>
-          <li>deny <code>.env*</code> <span class="badge b-has">CÓ</span> secret không vào context</li>
-          <li>attribution tắt <span class="badge b-has">CÓ</span> commit, PR không có dòng Claude</li>
-          <li><code>trace.py</code> <span class="badge b-has">CÓ</span> check tĩnh của gói (2.8)</li>
+          <li>Plan mode <span class="badge b-has">BUILT</span> approval gate</li>
+          <li>subagent <code>reviewer</code> <span class="badge b-has">BUILT</span> fresh context</li>
+          <li>Stop hook <span class="badge b-has">BUILT</span> tests must run <small>(really part of layer 2)</small></li>
+          <li>deny <code>.env*</code> <span class="badge b-has">BUILT</span> secrets stay out of context</li>
+          <li>attribution off <span class="badge b-has">BUILT</span> no Claude line in commits and PRs</li>
+          <li><code>trace.py</code> <span class="badge b-has">BUILT</span> the package's static check (2.8)</li>
         </ul>
       </div>
       <div class="card l3">
-        <h4>Bộ nhớ global</h4>
+        <h4>Global memory</h4>
         <ul>
-          <li><code>~/.claude/lessons.md</code> <span class="badge b-has">CÓ</span><br><small>bài học về cách Claude làm việc, không nạp mỗi session, tìm theo tag</small></li>
+          <li><code>~/.claude/lessons.md</code> <span class="badge b-has">BUILT</span><br><small>lessons about how Claude works, not loaded every session, found by tag</small></li>
         </ul>
       </div>
     </div>
@@ -271,235 +271,235 @@
 
   <!-- 2.2 -->
   <div class="sub">
-    <h3>2.2 Tám bước</h3>
+    <h3>2.2 Eight steps</h3>
     <div class="phases">
-      <div class="phase head"><span>#</span><span>Bước</span><span>Làm gì</span><span>Thành phần · Output</span></div>
-      <div class="phase"><span class="n">①</span><span class="t">Frame<small>đóng khung</small></span><span>Trả lời 4 câu hỏi (2.3). Làm trong đầu, chỉ nói ra khi mục đích không phải Deliver</span><span><span class="lbl">dùng</span>workflow: Frame the task<span class="lbl">ra</span>cách làm</span></div>
-      <div class="phase"><span class="n">②</span><span class="t">Context<small>thu thập</small></span><span>Rộng → xếp hạng rủi ro → sâu theo luồng dữ liệu → rộng lại tại từng điểm. Tìm trong lessons theo tag</span><span><span class="lbl">dùng</span>workflow: Gathering context · lessons<span class="lbl">ra</span>bản đồ, đã xem / chưa xem</span></div>
-      <div class="phase"><span class="n">③</span><span class="t">Agree<small>thống nhất "đúng"</small> <span class="gate">◀</span></span><span>Viết ví dụ nghiệm thu trước. <b>G1</b>: có giá trị tự đặt mà user nhìn thấy thì đưa ví dụ (<code>assumed</code>) và chờ. Giá trị tự đặt user không thấy thì tự quyết và ghi vào báo cáo. <b>G4</b>: quá một session thì spec thành file. Chưa rõ "đúng" thì tìm chuẩn đối chiếu</span><span><span class="lbl">dùng</span>spec skill · mẫu Spec<span class="lbl">ra</span>ví dụ · <code>spec.md</code> khi G4</span></div>
-      <div class="phase"><span class="n">④</span><span class="t">Plan<small>chia bước</small> <span class="gate">◀</span></span><span>Mỗi bước một thay đổi logic, rủi ro đi trước, code chạy được sau mỗi bước. <b>G2</b>: nhiều hơn một commit thì plan chờ duyệt. Nhiều deliverable, quá 3 bước, hoặc nhiều yêu cầu trong một tin thì thành map, duyệt một lần (2.5)</span><span><span class="lbl">dùng</span>Plan mode · mẫu Plan, Map<span class="lbl">ra</span>plan · <code>map.md</code></span></div>
-      <div class="phase"><span class="n">⑤</span><span class="t">Do<small>thực hiện</small> <span class="gate">◀</span></span><span>Mỗi bước: test từ ví dụ, thấy fail, rồi code. Test phải đỏ đúng vì lỗi nó canh; bản sửa viết trước test thì trả bản sửa về, thấy đỏ, rồi khôi phục. <b>G3</b>: trước bước khó hoàn tác, nói nó làm hỏng gì và hỏi, kể cả khi đã được yêu cầu rõ. Có plan thì mỗi bước báo một dòng rồi đi tiếp, không dừng</span><span><span class="lbl">dùng</span>Stop hook · mutation check skill<span class="lbl">ra</span>kết quả · mỗi thay đổi một commit</span></div>
-      <div class="phase"><span class="n">⑥</span><span class="t">Verify<small>kiểm chứng</small></span><span>Khi G1 hoặc G2: bằng chứng, không khẳng định. Đối chiếu với ví dụ đã duyệt. Check the checks. Báo cáo đọc được khi đã quên context</span><span><span class="lbl">dùng</span>verify skill · mẫu Report of finished work<span class="lbl">ra</span>bằng chứng · <code>[unverified]</code> · báo cáo</span></div>
-      <div class="phase"><span class="n">⑦</span><span class="t">Review<small>độc lập</small> <span class="gate">◀</span></span><span>Sau bước cuối của việc có plan (G2), hoặc khi được yêu cầu. Context mới, chỉ thấy kết quả và chuẩn đối chiếu, được yêu cầu bác bỏ</span><span><span class="lbl">dùng</span>review skill · subagent <code>reviewer</code><span class="lbl">ra</span>mẫu Review findings</span></div>
-      <div class="phase"><span class="n">⑧</span><span class="t">Learn<small>học</small></span><span>Khi có điều bất ngờ (bị sửa, check fail, plan phải đổi), sau sự cố, hoặc khi được yêu cầu. Gặp lần 2 thì thăng cấp thành check</span><span><span class="lbl">dùng</span>retro skill<span class="lbl">ra</span><code>lessons.md</code> · check mới</span></div>
+      <div class="phase head"><span>#</span><span>Step</span><span>What to do</span><span>Components · Output</span></div>
+      <div class="phase"><span class="n">①</span><span class="t">Frame<small>frame the task</small></span><span>Answer the 4 questions (2.3). Done silently, spoken aloud only when the purpose is not Deliver</span><span><span class="lbl">uses</span>workflow: Frame the task<span class="lbl">outputs</span>how to work</span></div>
+      <div class="phase"><span class="n">②</span><span class="t">Context<small>gather</small></span><span>Wide → rank by risk → deep along the data flow → wide again at each point. Search lessons by tag</span><span><span class="lbl">uses</span>workflow: Gathering context · lessons<span class="lbl">outputs</span>a map, seen / not seen</span></div>
+      <div class="phase"><span class="n">③</span><span class="t">Agree<small>agree on "correct"</small> <span class="gate">◀</span></span><span>Write the acceptance examples first. <b>G1</b>: if a value the user would see came from you, show the examples (<code>assumed</code>) and wait. A value you set that the user does not see: decide it yourself and put it in the report. <b>G4</b>: past one session, the spec becomes a file. If "correct" is unclear, find a reference to check against</span><span><span class="lbl">uses</span>spec skill · Spec shape<span class="lbl">outputs</span>examples · <code>spec.md</code> on G4</span></div>
+      <div class="phase"><span class="n">④</span><span class="t">Plan<small>split into steps</small> <span class="gate">◀</span></span><span>One logical change per step, riskiest first, code works after every step. <b>G2</b>: more than one commit means the plan waits for approval. Several deliverables, more than 3 steps, or several requests in one message become a map, approved once (2.5)</span><span><span class="lbl">uses</span>Plan mode · Plan and Map shapes<span class="lbl">outputs</span>plan · <code>map.md</code></span></div>
+      <div class="phase"><span class="n">⑤</span><span class="t">Do<small>carry out</small> <span class="gate">◀</span></span><span>Each step: test from the examples, see it fail, then code. The test must go red for the reason it guards; if the fix was written before the test, revert the fix, see it red, then restore it. <b>G3</b>: before a step that is hard to undo, say what it breaks and ask, even when the request was explicit. With a plan, report one line per step and move on, no stop</span><span><span class="lbl">uses</span>Stop hook · mutation check skill<span class="lbl">outputs</span>result · one commit per change</span></div>
+      <div class="phase"><span class="n">⑥</span><span class="t">Verify<small>prove</small></span><span>On G1 or G2: evidence, not assertion. Check against the approved examples. Check the checks. A report that can be read after the context is forgotten</span><span><span class="lbl">uses</span>verify skill · Report of finished work shape<span class="lbl">outputs</span>evidence · <code>[unverified]</code> · report</span></div>
+      <div class="phase"><span class="n">⑦</span><span class="t">Review<small>independent</small> <span class="gate">◀</span></span><span>After the last step of planned work (G2), or when asked. Fresh context, sees only the result and the reference, asked to refute it</span><span><span class="lbl">uses</span>review skill · subagent <code>reviewer</code><span class="lbl">outputs</span>Review findings shape</span></div>
+      <div class="phase"><span class="n">⑧</span><span class="t">Learn<small>learn</small></span><span>When there is a surprise (corrected, a check fails, the plan had to change), after an incident, or when asked. Seen a second time, it is promoted to a check</span><span><span class="lbl">uses</span>retro skill<span class="lbl">outputs</span><code>lessons.md</code> · new check</span></div>
     </div>
   </div>
 
   <!-- 2.3 -->
   <div class="sub">
-    <h3>2.3 Frame: bốn câu hỏi quyết định cách làm</h3>
+    <h3>2.3 Frame: four questions decide how to work</h3>
     <div class="frame">
-      <div class="fq"><b>1. Mục đích?</b>giao thay đổi · tìm hiểu · khôi phục · ra quyết định</div>
-      <div class="fq"><b>2. "Đúng" là gì?</b>đã biết (ví dụ) · tìm được (chuẩn đối chiếu) · người xem đánh giá · không có</div>
-      <div class="fq"><b>3. Sai thì sao?</b>đảo ngược được hay không · ảnh hưởng rộng hay hẹp</div>
-      <div class="fq"><b>4. Ai duyệt?</b>bạn có mặt · bạn vắng mặt</div>
+      <div class="fq"><b>1. Purpose?</b>deliver a change · learn something · restore · reach a decision</div>
+      <div class="fq"><b>2. What is "correct"?</b>known (examples) · findable (a reference) · judged by the viewer · none</div>
+      <div class="fq"><b>3. What if it is wrong?</b>reversible or not · wide or narrow impact</div>
+      <div class="fq"><b>4. Who approves?</b>you are present · you are absent</div>
     </div>
-    <div class="down">▼ suy ra</div>
+    <div class="down">▼ leads to</div>
     <div class="paths">
-      <div class="path"><b>Deliver</b>chặn theo cái giá của sai lầm, không theo lượng code: 4 gate quyết dừng ở đâu (2.4) · yêu cầu lớn thì tách thành slice (2.5)</div>
-      <div class="path"><b>Learn</b>giới hạn thời gian · output là câu trả lời + bằng chứng · code thử không cần test</div>
-      <div class="path"><b>Restore</b>giảm thiệt hại bằng thao tác đảo ngược được → giả thuyết, thí nghiệm, loại trừ → bản sửa gốc đi qua Deliver</div>
-      <div class="path"><b>Decide</b>brief các lựa chọn (mẫu Asking for a decision) → decision record</div>
-      <div class="path"><b>Người xem đánh giá</b>đưa bản nháp sớm, sửa theo phản hồi</div>
-      <div class="path"><b>Không đảo ngược được</b>dry-run trên bản sao · backup · plan rollback → <span class="gate">◀ hỏi trước bước đó</span></div>
-      <div class="path"><b>Không có ai duyệt</b>chỉ làm điều đảo ngược được, dừng trước phần còn lại, để lại báo cáo</div>
+      <div class="path"><b>Deliver</b>gated by the cost of a mistake, not by the amount of code: 4 gates decide where to stop (2.4) · a large request is split into slices (2.5)</div>
+      <div class="path"><b>Learn</b>time-boxed · output is an answer + evidence · throwaway code needs no tests</div>
+      <div class="path"><b>Restore</b>reduce damage with a reversible action → hypothesis, experiment, elimination → the root fix goes through Deliver</div>
+      <div class="path"><b>Decide</b>brief the options (Asking for a decision shape) → decision record</div>
+      <div class="path"><b>Judged by the viewer</b>show a draft early, fix from feedback</div>
+      <div class="path"><b>Irreversible</b>dry run on a copy · backup · rollback plan → <span class="gate">◀ ask before that step</span></div>
+      <div class="path"><b>No one to approve</b>do only what is reversible, stop before the rest, leave a report</div>
     </div>
   </div>
 
   <!-- 2.4 -->
   <div class="sub">
-    <h3>2.4 Bốn gate: dừng ở đâu</h3>
-    <p class="lead">Thay cho bảng Small/Medium/Large. Mỗi gate là một câu có/không, hỏi ở đúng bước. Mỗi câu "có" thêm một lần dừng hoặc một file. Không câu nào "có" thì làm luôn rồi báo cáo.</p>
+    <h3>2.4 Four gates: where to stop</h3>
+    <p class="lead">They replace the Small/Medium/Large table. Each gate is a yes/no question, asked at the right step. Each "yes" adds one stop or one file. If every answer is "no", do the work and report.</p>
     <div class="frame">
-      <div class="fq"><b>G1 · ở ③ Agree</b>Viết ví dụ nghiệm thu trước. Có giá trị nào user nhìn thấy (nhãn, định dạng, thông báo, mặc định) do Claude tự đặt, không đến từ yêu cầu, code hay bạn? → đưa ví dụ, đánh dấu <code>assumed</code> <span class="gate">◀ chờ</span> · giá trị tự đặt user không thấy: tự quyết, ghi <code>[decided]</code></div>
-      <div class="fq"><b>G2 · ở ④ Plan</b>Cần nhiều hơn một thay đổi logic, tức nhiều hơn một commit? → plan, mỗi bước một thay đổi <span class="gate">◀ duyệt</span> · nhiều deliverable, quá 3 bước, hoặc nhiều yêu cầu trong một tin? → map các slice <span class="gate">◀ duyệt map một lần</span> (2.5)</div>
-      <div class="fq"><b>G3 · trước mọi bước</b>Bước tới khó hoàn tác: API, data model, dữ liệu đã lưu, bảo mật, migration, thứ đã công bố? → nói nó làm hỏng gì, hỏi cách triển khai, kể cả khi đã được yêu cầu rõ <span class="gate">◀ hỏi</span></div>
-      <div class="fq"><b>G4 · ở ③ Agree</b>Việc kéo dài quá session này, hoặc chạy khi vắng mặt? → spec thành file</div>
+      <div class="fq"><b>G1 · at ③ Agree</b>Write the acceptance examples first. Is any value the user would see (label, format, message, default) set by Claude, not coming from the request, the code or you? → show the examples, mark them <code>assumed</code> <span class="gate">◀ wait</span> · a value you set that the user does not see: decide it yourself, write <code>[decided]</code></div>
+      <div class="fq"><b>G2 · at ④ Plan</b>Does it need more than one logical change, so more than one commit? → plan, one change per step <span class="gate">◀ approve</span> · several deliverables, more than 3 steps, or several requests in one message? → a map of slices <span class="gate">◀ approve the map once</span> (2.5)</div>
+      <div class="fq"><b>G3 · before every step</b>Is the next step hard to undo: API, data model, stored data, security, migration, anything published? → say what it breaks, ask how to roll it out, even when the request was explicit <span class="gate">◀ ask</span></div>
+      <div class="fq"><b>G4 · at ③ Agree</b>Will the work outlive this session, or run while no one is watching? → the spec becomes a file</div>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Gate "có"</th><th>Kéo theo ở bước sau</th></tr></thead>
+        <thead><tr><th>Gate answered "yes"</th><th>What it adds at later steps</th></tr></thead>
         <tbody>
-          <tr><td>G1 hoặc G2</td><td>⑥ Verify bằng verify skill</td></tr>
-          <tr><td>G2</td><td>⑤ mỗi bước một dòng, không dừng · ⑦ Review sau bước cuối</td></tr>
-          <tr><td>G2 ra map</td><td>mỗi slice đi đủ 8 bước và có báo cáo riêng · slice chỉ dừng khi G1 hoặc G3</td></tr>
-          <tr><td>có điều bất ngờ</td><td>⑧ Learn bằng retro skill</td></tr>
+          <tr><td>G1 or G2</td><td>⑥ Verify with the verify skill</td></tr>
+          <tr><td>G2</td><td>⑤ one line per step, no stop · ⑦ Review after the last step</td></tr>
+          <tr><td>G2 gives a map</td><td>each slice goes through all 8 steps and has its own report · a slice stops only on G1 or G3</td></tr>
+          <tr><td>a surprise</td><td>⑧ Learn with the retro skill</td></tr>
         </tbody>
       </table>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Lúc nào dừng</th><th>Lúc nào đi tiếp</th></tr></thead>
+        <thead><tr><th>When to stop</th><th>When to go on</th></tr></thead>
         <tbody>
-          <tr><td>G1: giá trị tự đặt mà user nhìn thấy</td><td>giá trị tự đặt user không thấy: tự quyết, ghi <code>[decided]</code></td></tr>
-          <tr><td>G2: plan hoặc map chờ duyệt, một lần</td><td>xong mỗi bước, xong mỗi slice: báo một dòng</td></tr>
-          <tr><td>G3: bước khó hoàn tác</td><td>việc đảo ngược được và không ai thấy</td></tr>
-          <tr><td>plan sai, việc vượt ra ngoài map, sửa hai lần vẫn fail</td><td>check fail mà plan vẫn đúng: sửa rồi chạy lại</td></tr>
+          <tr><td>G1: a value you set that the user would see</td><td>a value you set that the user does not see: decide it yourself, write <code>[decided]</code></td></tr>
+          <tr><td>G2: plan or map waits for approval, once</td><td>after each step, after each slice: report one line</td></tr>
+          <tr><td>G3: a step that is hard to undo</td><td>work that is reversible and that no one sees</td></tr>
+          <tr><td>the plan is wrong, the work goes outside the map, two fixes still fail</td><td>a check fails but the plan is still right: fix and re-run</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note"><b>Vì sao đổi (01/11).</b>Bạn vẫn phải duyệt từng bước. Ba luật gây ra phần lớn số lần dừng: dừng sau mỗi bước, G1 chờ với bất kỳ giá trị <code>assumed</code> nào, và mỗi tin nhắn chỉ một câu hỏi. Nay G1 chỉ dừng cho giá trị user nhìn thấy, mỗi bước báo một dòng rồi đi tiếp, câu hỏi gom lại ở một điểm duyệt và câu nào cũng có đề xuất. Lesson 25/10 giữ G1 ở mức này: format mật khẩu tạm nằm lẫn giữa 22 ví dụ và chỉ bị từ chối khi code đã viết. Chưa đo trên task thật.</div>
-    <div class="note"><b>Vì sao bỏ bảng, và đã đo gì (11/10).</b>Một task có nhiều tính chất độc lập, bảng bắt chọn một nhãn và không nói dòng nào thắng khi khớp nhiều dòng. Hỏi Claude phân loại 8 task, mỗi task 5 lần: bảng cũ cho 5/8 task cùng nhãn, 4 gate cho 6/8 task cùng tổ hợp và 30/32 câu trả lời gate giống nhau. Hành vi thật, hỏi trước khi đổi field API công khai: bảng cũ 5/6, gate bản đầu 7/12, G3 chặt 11/12. Đổi tên biến nội bộ trong 4 file: cả hai bản đều làm luôn, 3/3.</div>
+    <div class="note"><b>Why it changed (1 Nov).</b>You still had to approve every step. Three rules caused most of the stops: stop after each step, G1 waits on any <code>assumed</code> value, and one question per message. Now G1 stops only for values the user would see, each step reports one line and moves on, questions are batched at one approval point, and every question comes with a recommendation. The 25 Oct lesson keeps G1 at this level: the temporary-password format sat among 22 examples and was rejected only after the code was written. Not yet measured on real tasks.</div>
+    <div class="note"><b>Why the table was dropped, and what was measured (11 Oct).</b>A task has several independent properties; the table forces one label and does not say which row wins when several match. Claude was asked to classify 8 tasks, 5 times each: the old table gave the same label on 5/8 tasks, the 4 gates gave the same combination on 6/8 tasks and the same gate answers on 30/32 answers. Real behaviour, asking before changing a public API field: old table 5/6, first version of the gates 7/12, strict G3 11/12. Renaming an internal variable across 4 files: both versions just did it, 3/3.</div>
   </div>
 
   <!-- 2.5 -->
   <div class="sub">
-    <h3>2.5 Yêu cầu lớn: map và slice</h3>
-    <p class="lead">Trước đây một yêu cầu lớn thành một spec lớn, kéo theo plan lớn và diff lớn, nên rất khó review. Nay yêu cầu lớn được tách thành nhiều <b>slice</b>. Mỗi slice có một hành vi user thấy được, tối đa 3 bước, và đi đủ 8 bước của riêng nó. <b>Map</b> giữ chỗ của từng slice trong toàn hệ thống.</p>
+    <h3>2.5 Large requests: map and slice</h3>
+    <p class="lead">Before, one large request became one large spec, which led to a large plan and a large diff, so it was very hard to review. Now a large request is split into several <b>slices</b>. Each slice has one behaviour the user can see, at most 3 steps, and goes through its own 8 steps. The <b>map</b> keeps each slice's place in the whole system.</p>
     <div class="flow">
-      <div class="fn">Yêu cầu: nhiều deliverable, hoặc quá 3 bước, hoặc nhiều yêu cầu trong một tin</div>
+      <div class="fn">Request: several deliverables, or more than 3 steps, or several requests in one message</div>
       <div class="fa">▼ ① Frame · ② Context</div>
-      <div class="fn l1"><code>map.md</code>: mỗi slice một dòng · phụ thuộc · chạm vào đâu (module, REQ) · cái gì không bị chạm · câu hỏi Q1… kèm đề xuất</div>
-      <div class="fa"><span class="gate">◀ bạn duyệt một lần, trả lời <code>ok</code> hoặc <code>Q1 b</code></span></div>
+      <div class="fn l1"><code>map.md</code>: one line per slice · dependencies · what it touches (module, REQ) · what it does not touch · questions Q1… with recommendations</div>
+      <div class="fa"><span class="gate">◀ you approve once, answer <code>ok</code> or <code>Q1 b</code></span></div>
       <div class="split">
-        <div class="fn l1">S1: spec · ≤3 bước · verify · review · 1 dòng báo</div>
-        <div class="fn l1">S2 … Sn: giống S1, theo thứ tự phụ thuộc</div>
+        <div class="fn l1">S1: spec · ≤3 steps · verify · review · 1 line report</div>
+        <div class="fn l1">S2 … Sn: same as S1, in dependency order</div>
       </div>
-      <div class="fa">▼ một slice chỉ dừng khi: giá trị user thấy phải tự đặt (G1) · bước khó hoàn tác (G3) · việc vượt ra ngoài map · sửa hai lần vẫn fail</div>
-      <div class="fn">báo cáo cuối: <code>DONE · S1 ✓ S2 ✓ S3 ✓</code>, khoảng 8 dòng</div>
+      <div class="fa">▼ a slice stops only when: a user-visible value must be set by Claude (G1) · a step is hard to undo (G3) · the work goes outside the map · two fixes still fail</div>
+      <div class="fn">final report: <code>DONE · S1 ✓ S2 ✓ S3 ✓</code>, about 8 lines</div>
     </div>
     <div class="two">
       <div>
-        <div class="cap"><code>map.md</code>: mẫu Map trong communication <span class="badge b-has">CÓ</span></div>
-<pre># Map: &lt;yêu cầu&gt;        S1 ✓ S2 ▶ S3 S4
-- S1 &lt;một kết quả user thấy&gt; · after: —
+        <div class="cap"><code>map.md</code>: the Map shape in communication <span class="badge b-has">BUILT</span></div>
+<pre># Map: &lt;request&gt;        S1 ✓ S2 ▶ S3 S4
+- S1 &lt;one result the user sees&gt; · after: —
      · touches: &lt;module, REQ&gt;
 - S3 &lt;…&gt; · after: S1 · touches: &lt;…&gt;
-     · hard to undo: &lt;cái gì&gt;
-Untouched: &lt;thứ tưởng bị đổi mà không&gt;
+     · hard to undo: &lt;what&gt;
+Untouched: &lt;things that look changed but are not&gt;
 Decide first:
-- Q1 &lt;câu hỏi&gt; · a &lt;…&gt; · b &lt;…&gt; · rec: a</pre>
+- Q1 &lt;question&gt; · a &lt;…&gt; · b &lt;…&gt; · rec: a</pre>
       </div>
       <div>
-        <div class="cap">Độ chi tiết theo cấp</div>
-<pre>map        logic cấp cao: user nhận được gì,
-           thứ tự, phụ thuộc
-           → bạn đọc kỹ, duyệt
-spec slice từng nhánh: điều kiện → kết quả,
-           giá trị thật
-           → bạn chỉ đọc khi slice hỏi
-           (G1) hoặc khi muốn xem
-## In the map   map · slice trước, sau ·
-                không được làm hỏng gì</pre>
+        <div class="cap">Level of detail by tier</div>
+<pre>map        high-level logic: what the user gets,
+           order, dependencies
+           → you read it closely, approve
+spec slice each branch: condition → result,
+           real values
+           → you read it only when the slice asks
+           (G1) or when you want to look
+## In the map   map · slice before, after ·
+                must not break anything</pre>
       </div>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Bạn đọc</th><th>Bạn trả lời</th></tr></thead>
+        <thead><tr><th>You read</th><th>You answer</th></tr></thead>
         <tbody>
-          <tr><td>Dòng đầu mỗi báo cáo: <code>DONE</code> không cần làm gì · <code>ASK n</code> có n câu hỏi ngay bên dưới · <code>BLOCKED</code> kèm lý do bị chặn</td><td><code>ok</code>: chấp nhận mọi đề xuất</td></tr>
-          <tr><td>Hành vi đổi: 1–3 dòng trước → sau, giá trị thật · diagram chỉ khi luồng rẽ nhánh</td><td><code>Q2 b</code>: chọn b cho câu Q2</td></tr>
-          <tr><td>Khoảng 8 dòng trong chat · chi tiết nằm trong spec, commit và PR</td><td><code>S3 drop</code>: bỏ slice S3 · <code>F2</code>, <code>all</code>: xem chi tiết</td></tr>
+          <tr><td>First line of every report: <code>DONE</code> nothing for you to do · <code>ASK n</code> n questions right below · <code>BLOCKED</code> with the reason it is blocked</td><td><code>ok</code>: accept every recommendation</td></tr>
+          <tr><td>Behaviour change: 1–3 lines before → after, real values · a diagram only when the flow branches</td><td><code>Q2 b</code>: pick b for question Q2</td></tr>
+          <tr><td>About 8 lines in chat · details live in the spec, commits and PR</td><td><code>S3 drop</code>: remove slice S3 · <code>F2</code>, <code>all</code>: see details</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note"><b>Một slice một context.</b>Mỗi slice chạy từ file spec của nó. Map có hơn 3 slice thì mỗi slice chạy trong một subagent riêng, còn session chính giữ map. Slice chạm cùng file thì chạy theo thứ tự phụ thuộc đã ghi trong map (xem <code>parallel-agents</code>).</div>
+    <div class="note"><b>One slice, one context.</b>Each slice runs from its own spec file. When the map has more than 3 slices, each slice runs in its own subagent and the main session keeps the map. Slices that touch the same file run in the dependency order written in the map (see <code>parallel-agents</code>).</div>
   </div>
 
   <!-- 2.6 -->
   <div class="sub">
-    <h3>2.6 File của task: khi nào có, ở đâu, để làm gì</h3>
-    <p class="lead">File tồn tại vì task kéo dài qua nhiều session: context phải sống sót khi cuộc chat mất đi. Task xong trong một session thì không cần file.</p>
+    <h3>2.6 Task files: when they exist, where, and for what</h3>
+    <p class="lead">Files exist because a task runs across several sessions: the context must survive when the chat is gone. A task finished within one session needs no file.</p>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Trường hợp</th><th>File ở lớp 1</th><th>Thêm ở lớp 2 (phần mềm)</th></tr></thead>
+        <thead><tr><th>Case</th><th>Layer 1 file</th><th>Added in layer 2 (software)</th></tr></thead>
         <tbody>
-          <tr><td>Xong trong một session</td><td>không có · báo cáo + commit message</td><td>—</td></tr>
-          <tr><td>G1 "có", xong trong một session</td><td>không có · ví dụ được duyệt ngay trong chat</td><td>—</td></tr>
-          <tr><td>G4: quá một session, hoặc chạy khi vắng mặt</td><td><code>spec.md</code> trong task folder</td><td>spec có mục Changes (REQ) · <code>status.json</code></td></tr>
-          <tr><td>Chưa rõ thế nào là đúng</td><td><code>spec.md</code> ghi chuẩn đối chiếu (spec skill)</td><td>—</td></tr>
-          <tr><td>Yêu cầu tách thành nhiều slice (2.5)</td><td><code>map.md</code> trong một folder không có spec · mỗi slice một task folder riêng nằm cạnh, có <code>spec.md</code></td><td>mỗi slice có Changes và <code>status.json</code> riêng</td></tr>
+          <tr><td>Done within one session</td><td>none · report + commit message</td><td>—</td></tr>
+          <tr><td>G1 "yes", done within one session</td><td>none · the examples are approved right in the chat</td><td>—</td></tr>
+          <tr><td>G4: past one session, or runs while no one is watching</td><td><code>spec.md</code> in the task folder</td><td>spec has a Changes section (REQ) · <code>status.json</code></td></tr>
+          <tr><td>"Correct" is unclear</td><td><code>spec.md</code> records the reference to check against (spec skill)</td><td>—</td></tr>
+          <tr><td>Request split into several slices (2.5)</td><td><code>map.md</code> in a folder with no spec · each slice has its own task folder beside it, with a <code>spec.md</code></td><td>each slice has its own Changes and <code>status.json</code></td></tr>
         </tbody>
       </table>
     </div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>File</th><th>Mục đích</th><th>Viết khi nào</th><th>Ai viết · ai đọc</th><th>Bảo vệ khỏi</th></tr></thead>
+        <thead><tr><th>File</th><th>Purpose</th><th>Written when</th><th>Who writes · who reads</th><th>Protects against</th></tr></thead>
         <tbody>
-          <tr><td><code>map.md</code> <span class="badge b-has">CÓ</span></td><td>Chỗ của từng slice trong toàn hệ thống</td><td>Trước slice đầu tiên, cập nhật khi mỗi slice xong</td><td>Claude viết · bạn duyệt một lần</td><td>Spec phình to · slice mất liên kết với hệ thống</td></tr>
-          <tr><td><code>spec.md</code></td><td>Định nghĩa "đúng"</td><td>Trước khi làm</td><td>Claude viết · bạn duyệt (slice dưới map: chỉ khi G1)</td><td>Hiểu sai yêu cầu</td></tr>
-          <tr><td>commit · PR</td><td>Ghi lại đã làm gì, vì sao, đã loại gì</td><td>Mỗi thay đổi một commit · PR khi xong</td><td>Claude viết · bạn duyệt PR, session sau đọc</td><td>Mất context · quyết định âm thầm</td></tr>
-          <tr><td><code>status.json</code> <span class="badge b-has">CÓ</span> <small>lớp 2</small></td><td>Chặn</td><td>Sau khi chạy test</td><td><b>Script</b> sinh · Claude chỉ đọc</td><td>Claude tự nhận là xong</td></tr>
-          <tr><td><code>lessons.md</code> <span class="badge b-has">CÓ</span></td><td>Học</td><td>Retro, khi có điều bất ngờ</td><td>Claude viết · tìm theo tag ở bước ②</td><td>Lặp lại lỗi cũ</td></tr>
+          <tr><td><code>map.md</code> <span class="badge b-has">BUILT</span></td><td>Each slice's place in the whole system</td><td>Before the first slice, updated as each slice finishes</td><td>Claude writes · you approve once</td><td>A bloated spec · slices losing their link to the system</td></tr>
+          <tr><td><code>spec.md</code></td><td>Defines "correct"</td><td>Before the work</td><td>Claude writes · you approve (slice under a map: only on G1)</td><td>Misreading the request</td></tr>
+          <tr><td>commit · PR</td><td>Records what was done, why, and what was rejected</td><td>One commit per change · PR when done</td><td>Claude writes · you approve the PR, a later session reads</td><td>Lost context · silent decisions</td></tr>
+          <tr><td><code>status.json</code> <span class="badge b-has">BUILT</span> <small>layer 2</small></td><td>Block</td><td>After tests run</td><td>A <b>script</b> generates it · Claude only reads</td><td>Claude declaring itself done</td></tr>
+          <tr><td><code>lessons.md</code> <span class="badge b-has">BUILT</span></td><td>Learn</td><td>Retro, when there is a surprise</td><td>Claude writes · found by tag at step ②</td><td>Repeating old mistakes</td></tr>
         </tbody>
       </table>
     </div>
     <div>
       <div>
-        <div class="cap"><code>spec.md</code>: mẫu Spec trong communication, dạng generic</div>
-<pre># &lt;Tên task&gt;
-## Goal         làm gì, vì sao
+        <div class="cap"><code>spec.md</code>: the Spec shape in communication, generic form</div>
+<pre># &lt;Task name&gt;
+## Goal         what to do, why
 ## Scope        In · Out
-## Where        file, module, nguồn liên quan
-## In the map   chỉ khi là slice: map · trước,
-                sau · không được làm hỏng gì
+## Where        files, modules, related sources
+## In the map   only for a slice: map · before,
+                after · must not break anything
 ## What correct means
-  ví dụ nghiệm thu, HOẶC chuẩn đối chiếu
-  (tiêu chí, bản cũ, tính chất…)
-## Decisions    đã chốt · lý do · đã loại
-## Open questions   ai quyết
-## Done when    một kiểm tra chạy được</pre>
+  acceptance examples, OR a reference
+  (criteria, old version, properties…)
+## Decisions    settled · reason · rejected
+## Open questions   who decides
+## Done when    one runnable check</pre>
       </div>
     </div>
-    <div class="note"><b>Không có file log riêng.</b>Session sau tiếp tục từ spec, các commit và PR; task có map thì dòng tiến độ (<code>S1 ✓ S2 ▶</code>) nằm ngay đầu map.</div>
+    <div class="note"><b>No separate log file.</b>A later session continues from the spec, the commits and the PR; for a task with a map, the progress line (<code>S1 ✓ S2 ▶</code>) sits at the top of the map.</div>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Vai trò (places.md)</th><th>Mặc định</th></tr></thead>
+        <thead><tr><th>Role (places.md)</th><th>Default</th></tr></thead>
         <tbody>
-          <tr><td>work folder</td><td><code>.work/</code> ở gốc project, không bao giờ ở home · không có project thì hỏi</td></tr>
-          <tr><td>task folder · spec</td><td><code>&lt;work folder&gt;/tasks/&lt;ngày&gt;-&lt;tên&gt;/</code> · <code>spec.md</code></td></tr>
-          <tr><td>map</td><td><code>&lt;task folder&gt;/map.md</code> · slice ở folder cạnh nó: <code>&lt;ngày&gt;-&lt;tên&gt;-s1/</code>, <code>-s2/</code>…</td></tr>
+          <tr><td>work folder</td><td><code>.work/</code> at the project root, never in home · with no project, ask</td></tr>
+          <tr><td>task folder · spec</td><td><code>&lt;work folder&gt;/tasks/&lt;date&gt;-&lt;name&gt;/</code> · <code>spec.md</code></td></tr>
+          <tr><td>map</td><td><code>&lt;task folder&gt;/map.md</code> · slices in folders beside it: <code>&lt;date&gt;-&lt;name&gt;-s1/</code>, <code>-s2/</code>…</td></tr>
           <tr><td>project lessons · personal lessons</td><td><code>&lt;work folder&gt;/lessons.md</code> · <code>~/.claude/lessons.md</code></td></tr>
-          <tr><td>decision records</td><td>thư mục project đã có (<code>docs/adr/</code>, <code>docs/decisions/</code>…) · chưa có thì đề xuất <code>docs/decisions/</code> và chờ</td></tr>
-          <tr><td>project kit · project instructions</td><td><code>~/.claude/project-kit/</code> · <code>CLAUDE.md</code> hoặc <code>AGENTS.md</code></td></tr>
+          <tr><td>decision records</td><td>the folder the project already has (<code>docs/adr/</code>, <code>docs/decisions/</code>…) · if none, propose <code>docs/decisions/</code> and wait</td></tr>
+          <tr><td>project kit · project instructions</td><td><code>~/.claude/project-kit/</code> · <code>CLAUDE.md</code> or <code>AGENTS.md</code></td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note"><b>Chỗ để là mặc định, project đổi được.</b><code>CLAUDE.md</code> của project ghi đè bất kỳ vai trò nào, bằng lời của mình: dòng <code>Work records: notes/work/</code> thì task vào <code>notes/work/tasks/</code>. Đo 11/10: 4/4 lần đúng, 2/2 với cách viết khác (<code>planning/</code>), không khai báo thì 2/2 vào <code>.work/tasks/</code>. Chưa có thư mục decision record thì Claude đề xuất và chờ: 8/8.</div>
+    <div class="note"><b>Places are defaults; a project can change them.</b>The project's <code>CLAUDE.md</code> overrides any role, in its own words: a line <code>Work records: notes/work/</code> sends tasks to <code>notes/work/tasks/</code>. Measured 11 Oct: correct 4/4 times, 2/2 with different wording (<code>planning/</code>), and with no declaration 2/2 went to <code>.work/tasks/</code>. With no decision-record folder yet, Claude proposes one and waits: 8/8.</div>
   </div>
 
   <!-- 2.7 -->
   <div class="sub">
-    <h3>2.7 Vòng học</h3>
-    <p class="lead">Lấp lỗ hổng của quy tắc "Learning from repeats": mỗi session bắt đầu với trí nhớ trống, nên Claude cần một bản ghi sống lâu hơn từng task để biết một lỗi đã từng xảy ra.</p>
+    <h3>2.7 The learning loop</h3>
+    <p class="lead">It fills the gap in the "Learning from repeats" rule: every session starts with an empty memory, so Claude needs a record that outlives each task to know a mistake has happened before.</p>
     <div class="flow">
-      <div class="fn l3">spec, commit và PR của từng task (thô)</div>
-      <div class="fa">▼ <code>retro</code> <span class="badge b-has">CÓ</span>: chỉ giữ điều bất ngờ</div>
-      <div class="fn l1">giả định sai · plan phải sửa · reviewer bắt lỗi · mutant sống sót · bạn phải sửa Claude</div>
-      <div class="fa">▼ ghi vào</div>
+      <div class="fn l3">spec, commits and PR of each task (raw)</div>
+      <div class="fa">▼ <code>retro</code> <span class="badge b-has">BUILT</span>: keeps only the surprises</div>
+      <div class="fn l1">wrong assumption · plan had to change · reviewer caught a bug · a mutant survived · you had to correct Claude</div>
+      <div class="fa">▼ written to</div>
       <div class="split">
-        <div class="fn l1"><code>~/.claude/lessons.md</code><br><small>về cách Claude làm việc</small></div>
-        <div class="fn l2"><code>.work/lessons.md</code><br><small>về domain và code của project</small></div>
+        <div class="fn l1"><code>~/.claude/lessons.md</code><br><small>about how Claude works</small></div>
+        <div class="fn l2"><code>.work/lessons.md</code><br><small>about the project's domain and code</small></div>
       </div>
-      <div class="fa">▼ gặp lần 2</div>
-      <div class="fn mech">thăng cấp: test · lint · hook, sau cùng mới là một dòng trong CLAUDE.md. Thấy check mới fail trên đúng lỗi đó trước khi tin nó</div>
+      <div class="fa">▼ seen a second time</div>
+      <div class="fn mech">promote: a test · lint · hook, and only last a line in CLAUDE.md. See the new check fail on exactly that mistake before trusting it</div>
       <div class="fa">▼</div>
-      <div class="fn">rule hoặc check được nạp ở mọi task sau → vòng quay lại bước ①</div>
+      <div class="fn">the rule or check is loaded in every later task → the loop returns to step ①</div>
     </div>
 <pre>- 2026-09-30 · coupon-stacking · #money #assumption
-  Giả định "cộng %" sai, PO muốn nhân. PRD không nói rõ.   Lần: 1 · theo dõi
+  Wrong assumption: "add the %" was wrong, the PO wants multiply. The PRD does not say.   Count: 1 · watching
 - 2026-10-12 · refund-v2 · #money #assumption
-  Lại đoán cách kết hợp % mà không hỏi.                    Lần: 2
-  → PROMOTED: requirements hỏi bắt buộc "công thức kết hợp %" với REQ về tiền</pre>
+  Guessed how to combine % again without asking.                                          Count: 2
+  → PROMOTED: requirements must ask for the "% combining formula" for any REQ about money</pre>
   </div>
 
   <!-- 2.8 -->
   <div class="sub">
-    <h3>2.8 Cơ chế: ép được gì, không ép được gì</h3>
+    <h3>2.8 Mechanisms: what they enforce, what they cannot</h3>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Cơ chế</th><th>Ép được</th><th>Không ép được</th><th>Đã kiểm tra</th></tr></thead>
+        <thead><tr><th>Mechanism</th><th>Enforces</th><th>Cannot enforce</th><th>Checked</th></tr></thead>
         <tbody>
-          <tr><td>Plan mode</td><td>Không sửa file trước khi bạn duyệt plan</td><td>Plan có tốt không · Claude có vào Plan mode khi G2 "có" không</td><td>Chưa. Test thủ công trên máy bạn</td></tr>
-          <tr><td>Stop hook</td><td>Đã sửa code thì test phải chạy sau lần sửa cuối</td><td>Test có pass không, có ý nghĩa không · sửa file bằng lệnh Bash · session không lưu transcript · file ngoài git repo (scratchpad, /tmp: cố ý không tính)</td><td>22 test · 8/8 lỗi cài vào bị bắt · 05/11: 3 mutation của luật "chỉ tính file trong repo" đều bị bắt · 11/10 chạy thật sau khi cài: tạo <code>add.js</code>, định dừng, bị chặn, chạy test rồi mới dừng</td></tr>
-          <tr><td>subagent <code>reviewer</code></td><td>Context riêng · không có công cụ sửa file</td><td>Có tìm đúng vấn đề không · không ghi qua Bash (chỉ là chỉ dẫn)</td><td>Được gọi 10/10 lần khi review (11/10). Chất lượng tìm lỗi: chưa đo bằng bug cài sẵn</td></tr>
-          <tr><td>deny <code>.env*</code></td><td>Read và lệnh Bash nhận diện được (<code>cat</code>, <code>head</code>…) không đọc được <code>.env</code></td><td><code>grep -r</code> từ thư mục · script tự mở file · <code>.env</code> ở thư mục cha</td><td>11/10 sau khi cài: Read và <code>cat .env</code> bị chặn, <code>.env.example</code> đọc được</td></tr>
-          <tr><td>attribution tắt</td><td>Claude Code bảo Claude không thêm dòng Co-Authored-By, Generated with</td><td>Không kiểm commit sau khi tạo · trailer do người yêu cầu vẫn vào</td><td>Không setting 3/3 có trailer, có setting 0/3 · sau khi cài 2/2 không có</td></tr>
-          <tr><td><code>trace.py</code> (check của gói)</td><td>Mỗi ý của workflow còn chỗ ở · không đường dẫn ngoài <code>places.md</code>, không tên skill ngoài frontmatter · tham chiếu chéo theo tên mục và phải tồn tại · workflow không tên file, đường dẫn, tên skill</td><td>Nội dung có đúng không · chỉ chạy khi người sửa gói chạy nó</td><td>164/164 (01/11) · mọi lỗi cài vào đều bị bắt (11/10)</td></tr>
+          <tr><td>Plan mode</td><td>No file edits before you approve the plan</td><td>Whether the plan is good · whether Claude enters Plan mode when G2 is "yes"</td><td>Not yet. Manual test on your machine</td></tr>
+          <tr><td>Stop hook</td><td>If code was edited, tests must run after the last edit</td><td>Whether the tests pass or mean anything · edits made through a Bash command · sessions that save no transcript · files outside the git repo (scratchpad, /tmp: deliberately not counted)</td><td>22 tests · 8/8 planted faults caught · 5 Nov: 3 mutations of the "count only files in the repo" rule were all caught · 11 Oct real run after install: created <code>add.js</code>, tried to stop, was blocked, ran the tests, then stopped</td></tr>
+          <tr><td>subagent <code>reviewer</code></td><td>Its own context · no tool to edit files</td><td>Whether it finds the right problem · writing through Bash (only an instruction)</td><td>Called 10/10 times when reviewing (11 Oct). Quality of bug finding: not yet measured with planted bugs</td></tr>
+          <tr><td>deny <code>.env*</code></td><td>Read and recognisable Bash commands (<code>cat</code>, <code>head</code>…) cannot read <code>.env</code></td><td><code>grep -r</code> from a directory · a script that opens the file itself · <code>.env</code> in a parent directory</td><td>11 Oct after install: Read and <code>cat .env</code> were blocked, <code>.env.example</code> could be read</td></tr>
+          <tr><td>attribution off</td><td>Claude Code tells Claude not to add the Co-Authored-By and Generated with lines</td><td>Does not check the commit after it is created · a trailer the person asked for still goes in</td><td>Without the setting 3/3 had the trailer, with the setting 0/3 · after install 2/2 had none</td></tr>
+          <tr><td><code>trace.py</code> (the package's check)</td><td>Every idea in the workflow still has a place · no path outside <code>places.md</code>, no skill name outside frontmatter · cross-references by section name must exist · the workflow has no file names, paths or skill names</td><td>Whether the content is right · it runs only when whoever edits the package runs it</td><td>164/164 (1 Nov) · every planted fault was caught (11 Oct)</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="note"><b>Stop hook thực chất thuộc lớp 2.</b>Nó nằm ở ~/.claude vì cài một lần cho mọi project, nhưng chỉ có nghĩa khi có code và test. Nó tự bỏ qua task không sửa code, và tắt được theo project bằng <code>Test command: `none`</code>.</div>
+    <div class="note"><b>The Stop hook really belongs to layer 2.</b>It sits in ~/.claude because it is installed once for every project, but it only means something when there is code and a test. It skips tasks that edit no code by itself, and can be turned off per project with <code>Test command: `none`</code>.</div>
   </div>
 </section>
 
@@ -507,45 +507,45 @@ spec slice từng nhánh: điều kiện → kết quả,
 
 <!-- =================================================== 3 -->
 <section id="layer2">
-  <div class="eyebrow">Phần 3</div>
-  <h2>Lớp 2 · Project: phần riêng cho phát triển phần mềm</h2>
-  <p class="lead">Thêm vào lớp 1, không thay thế. Mỗi project chọn các thành phần mình cần. Một project không phải phần mềm (Video Studio chẳng hạn) có lớp 2 hoàn toàn khác.</p>
+  <div class="eyebrow">Part 3</div>
+  <h2>Layer 2 · Project: the part specific to software development</h2>
+  <p class="lead">Added on top of layer 1, not replacing it. Each project picks the components it needs. A project that is not software (Video Studio, for example) has a completely different layer 2.</p>
 
   <div class="sub">
-    <h3>3.1 Thành phần</h3>
+    <h3>3.1 Components</h3>
     <div class="cards">
       <div class="card l2">
-        <h4>Quy ước (CLAUDE.md)</h4>
+        <h4>Conventions (CLAUDE.md)</h4>
         <ul>
           <li><code>Test command:</code> · build · lint</li>
-          <li>Quy ước mã REQ: <code>REQ-&lt;AREA&gt;-NNN</code></li>
-          <li>Nơi lưu requirement, spec, test plan</li>
-          <li>fixture, seed, môi trường test</li>
+          <li>REQ code convention: <code>REQ-&lt;AREA&gt;-NNN</code></li>
+          <li>Where requirements, specs and test plans are stored</li>
+          <li>fixtures, seeds, test environment</li>
         </ul>
       </div>
       <div class="card l2">
-        <h4>Skill SDLC <small>module shared + dev</small></h4>
+        <h4>SDLC skills <small>shared + dev modules</small></h4>
         <ul>
-          <li><code>requirements</code> <span class="badge b-has">CÓ</span> <small>chung với STLC</small> · <code>requirement-review</code> · <code>review-change</code></li>
+          <li><code>requirements</code> <span class="badge b-has">BUILT</span> <small>shared with STLC</small> · <code>requirement-review</code> · <code>review-change</code></li>
           <li><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code></li>
           <li><code>backend</code> · <code>frontend</code> <small>+ frontend-web / frontend-mobile</small></li>
-          <li><code>design-decision</code> <span class="badge b-has">CÓ</span> <small>khi cần</small></li>
+          <li><code>design-decision</code> <span class="badge b-has">BUILT</span> <small>when needed</small></li>
         </ul>
       </div>
       <div class="card l2">
-        <h4>Skill STLC + vận hành <small>module qa + ops</small></h4>
+        <h4>STLC + operations skills <small>qa + ops modules</small></h4>
         <ul>
-          <li><code>qa-foundations</code> <small>nền chung của QA, không tự kích hoạt</small></li>
+          <li><code>qa-foundations</code> <small>common base for QA, does not activate on its own</small></li>
           <li><code>test-plan</code> · <code>test-design</code> · <code>test-authoring</code> · <code>test-execution</code></li>
-          <li><code>bug-report</code> <span class="badge b-has">CÓ</span> · <code>visual-review</code> · <code>qa-sweep</code> · <code>playwright-cli</code></li>
-          <li><code>release</code> <span class="badge b-has">CÓ</span> · <code>incident</code> <span class="badge b-has">CÓ</span> <small>ops</small></li>
+          <li><code>bug-report</code> <span class="badge b-has">BUILT</span> · <code>visual-review</code> · <code>qa-sweep</code> · <code>playwright-cli</code></li>
+          <li><code>release</code> <span class="badge b-has">BUILT</span> · <code>incident</code> <span class="badge b-has">BUILT</span> <small>ops</small></li>
         </ul>
       </div>
       <div class="card mech">
-        <h4>Cơ chế</h4>
+        <h4>Mechanisms</h4>
         <ul>
-          <li>CI <code>trace.yml</code> <span class="badge b-has">CÓ</span>: task trong PR phải được chứng minh · thêm lint, typecheck, mutation tuỳ project</li>
-          <li><code>trace-check</code> <span class="badge b-has">CÓ</span> → sinh <code>status.json</code> · <code>--strict</code> chặn ví dụ còn <code>assumed</code></li>
+          <li>CI <code>trace.yml</code> <span class="badge b-has">BUILT</span>: a task in a PR must be proven · plus lint, typecheck, mutation per project</li>
+          <li><code>trace-check</code> <span class="badge b-has">BUILT</span> → generates <code>status.json</code> · <code>--strict</code> blocks examples that are still <code>assumed</code></li>
           <li>pre-commit · PR template · required checks</li>
         </ul>
       </div>
@@ -553,57 +553,57 @@ spec slice từng nhánh: điều kiện → kết quả,
   </div>
 
   <div class="sub">
-    <h3>3.2 Phân tích yêu cầu: nút chung của SDLC và STLC</h3>
+    <h3>3.2 Requirements analysis: the shared node of SDLC and STLC</h3>
     <div class="flow">
-      <div class="fn">PRD · ticket · trao đổi với PO</div>
-      <div class="fa">▼ lớp 1: ① Frame · ② Context (tìm mâu thuẫn với REQ cũ, nơi bị ảnh hưởng)</div>
-      <div class="fn l2"><b><code>requirements</code></b> <span class="badge b-has">CÓ</span>: hai lăng kính
+      <div class="fn">PRD · ticket · talks with the PO</div>
+      <div class="fa">▼ layer 1: ① Frame · ② Context (find conflicts with old REQs, places affected)</div>
+      <div class="fn l2"><b><code>requirements</code></b> <span class="badge b-has">BUILT</span>: two lenses
         <div class="split" style="margin-top:6px">
-          <div class="fn"><b>SDLC</b>: đủ chưa? mâu thuẫn? làm được?</div>
-          <div class="fn"><b>STLC</b>: testable chưa? biên? điều kiện?</div>
+          <div class="fn"><b>SDLC</b>: complete? conflicting? feasible?</div>
+          <div class="fn"><b>STLC</b>: testable? boundaries? conditions?</div>
         </div>
       </div>
-      <div class="fa">▼ lớp 1: không lấp lỗ hổng âm thầm → <code>assumed</code> (G1) · gom câu hỏi, mỗi câu kèm đề xuất · <code>review-work</code></div>
-      <div class="fa"><span class="gate">◀ PO, dev, QA duyệt ví dụ</span></div>
-      <div class="fn l3"><code>docs/product/requirements/&lt;area&gt;.md</code> · REQ-CHECKOUT-012 + ví dụ</div>
+      <div class="fa">▼ layer 1: never fill a gap silently → <code>assumed</code> (G1) · batch the questions, each with a recommendation · <code>review-work</code></div>
+      <div class="fa"><span class="gate">◀ PO, dev, QA approve the examples</span></div>
+      <div class="fn l3"><code>docs/product/requirements/&lt;area&gt;.md</code> · REQ-CHECKOUT-012 + examples</div>
       <div class="split">
-        <div><div class="fa">▼</div><div class="fn l2">SDLC: <code>task-spec</code> tham chiếu REQ → plan → code</div></div>
-        <div><div class="fa">▼</div><div class="fn l2">STLC: <code>test-plan</code> → <code>test-design</code> từ cùng ví dụ</div></div>
+        <div><div class="fa">▼</div><div class="fn l2">SDLC: <code>task-spec</code> refers to the REQ → plan → code</div></div>
+        <div><div class="fa">▼</div><div class="fn l2">STLC: <code>test-plan</code> → <code>test-design</code> from the same examples</div></div>
       </div>
-      <div class="fa">▼ gặp lại</div>
-      <div class="fn mech">test pass = requirement được đáp ứng · <code>trace-check</code> chứng minh</div>
+      <div class="fa">▼ meet again</div>
+      <div class="fn mech">test passes = requirement met · <code>trace-check</code> proves it</div>
     </div>
   </div>
 
   <div class="sub">
-    <h3>3.3 SDLC và STLC trên nền 8 bước</h3>
+    <h3>3.3 SDLC and STLC on top of the 8 steps</h3>
     <div class="tablebox">
       <table>
-        <thead><tr><th>Giai đoạn</th><th>Mục đích (Frame)</th><th>Lớp 1 dùng</th><th>Lớp 2 thêm</th><th>Cổng</th></tr></thead>
+        <thead><tr><th>Phase</th><th>Purpose (Frame)</th><th>Layer 1 uses</th><th>Layer 2 adds</th><th>Gate</th></tr></thead>
         <tbody>
-          <tr><td><b>Yêu cầu</b> = STLC phân tích yêu cầu</td><td>Deliver (tài liệu)</td><td>Frame · Context · G1 <code>assumed</code> · <code>review-work</code></td><td><code>requirements</code></td><td class="gate">◀ ví dụ</td></tr>
-          <tr><td>Thiết kế</td><td>Decide</td><td>brief (Asking for a decision) · decision record</td><td><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>design-decision</code></td><td class="gate">◀ ADR</td></tr>
-          <tr><td>STLC lập kế hoạch test</td><td>Deliver</td><td>Frame câu 3 → mức test</td><td><code>test-plan</code></td><td class="gate">◀ tiêu chí vào/ra</td></tr>
-          <tr><td>STLC thiết kế test case</td><td>Deliver</td><td><code>verify-work</code>: property test · mutation</td><td><code>test-design</code> · <code>test-authoring</code> · <code>qa-foundations</code></td><td>—</td></tr>
-          <tr><td>Code</td><td>Deliver</td><td><code>task-spec</code> khi G4 · Plan mode · Stop hook</td><td><code>backend</code> · <code>frontend</code> (web/mobile) · CLAUDE.md: lệnh</td><td class="gate">◀ plan hoặc map khi G2 · ◀ G3</td></tr>
-          <tr><td>STLC thực thi, báo lỗi</td><td>Deliver</td><td>quy tắc bằng chứng</td><td><code>test-execution</code> · <code>bug-report</code> · <code>qa-sweep</code> · <code>visual-review</code> · CI</td><td>—</td></tr>
+          <tr><td><b>Requirements</b> = STLC requirements analysis</td><td>Deliver (document)</td><td>Frame · Context · G1 <code>assumed</code> · <code>review-work</code></td><td><code>requirements</code></td><td class="gate">◀ examples</td></tr>
+          <tr><td>Design</td><td>Decide</td><td>brief (Asking for a decision) · decision record</td><td><code>solution-architecture</code> · <code>api-contract</code> · <code>design-system</code> · <code>design-decision</code></td><td class="gate">◀ ADR</td></tr>
+          <tr><td>STLC test planning</td><td>Deliver</td><td>Frame question 3 → test level</td><td><code>test-plan</code></td><td class="gate">◀ entry/exit criteria</td></tr>
+          <tr><td>STLC test case design</td><td>Deliver</td><td><code>verify-work</code>: property test · mutation</td><td><code>test-design</code> · <code>test-authoring</code> · <code>qa-foundations</code></td><td>—</td></tr>
+          <tr><td>Code</td><td>Deliver</td><td><code>task-spec</code> on G4 · Plan mode · Stop hook</td><td><code>backend</code> · <code>frontend</code> (web/mobile) · CLAUDE.md: commands</td><td class="gate">◀ plan or map on G2 · ◀ G3</td></tr>
+          <tr><td>STLC execution, bug reports</td><td>Deliver</td><td>evidence rule</td><td><code>test-execution</code> · <code>bug-report</code> · <code>qa-sweep</code> · <code>visual-review</code> · CI</td><td>—</td></tr>
           <tr><td>Review</td><td>—</td><td><code>review-work</code> · <code>reviewer</code></td><td>PR template</td><td class="gate">◀ PR</td></tr>
-          <tr><td>STLC đóng test</td><td>—</td><td>check the checks</td><td><code>trace-check</code> · mutation</td><td class="gate">◀ rủi ro còn lại</td></tr>
-          <tr><td>Release</td><td>Irreversible</td><td>dry-run · rollback · G3: nói nó làm hỏng gì, hỏi</td><td><code>release</code></td><td class="gate">◀ trước bước không đảo ngược</td></tr>
-          <tr><td>Vận hành</td><td>Restore · Learn</td><td>giảm thiệt hại trước · <code>retro</code></td><td><code>incident</code></td><td class="gate">◀ postmortem</td></tr>
+          <tr><td>STLC test closure</td><td>—</td><td>check the checks</td><td><code>trace-check</code> · mutation</td><td class="gate">◀ remaining risk</td></tr>
+          <tr><td>Release</td><td>Irreversible</td><td>dry run · rollback · G3: say what it breaks, ask</td><td><code>release</code></td><td class="gate">◀ before the irreversible step</td></tr>
+          <tr><td>Operations</td><td>Restore · Learn</td><td>reduce damage first · <code>retro</code></td><td><code>incident</code></td><td class="gate">◀ postmortem</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <div class="sub">
-    <h3>3.4 Phần mở rộng của spec.md cho phần mềm</h3>
-<pre>## Changes                        ← thêm ở lớp 2, trỏ về requirement
-- REQ-CHECKOUT-005 (sửa): 1 coupon → tối đa 2
-- REQ-CHECKOUT-012 (mới): 2 coupon thì % nhân nhau
-## What correct means             ← ví dụ gắn mã REQ
-- REQ-012 ex1: 100.000đ, 10% + 5% → 85.500đ
-## Done when                       ← thêm: requirement đã cập nhật · status.json sạch</pre>
+    <h3>3.4 The software extension of spec.md</h3>
+<pre>## Changes                        ← added in layer 2, points back to the requirement
+- REQ-CHECKOUT-005 (changed): 1 coupon → at most 2
+- REQ-CHECKOUT-012 (new): with 2 coupons the % multiply
+## What correct means             ← examples tagged with REQ codes
+- REQ-012 ex1: 100,000 VND, 10% + 5% → 85,500 VND
+## Done when                       ← added: requirement updated · status.json clean</pre>
   </div>
 </section>
 
@@ -611,92 +611,92 @@ spec slice từng nhánh: điều kiện → kết quả,
 
 <!-- =================================================== 4 -->
 <section id="layer3">
-  <div class="eyebrow">Phần 4</div>
-  <h2>Lớp 3 · Artifact: bộ nhớ nằm trong repo</h2>
-  <p class="lead">Tách theo một tiêu chí: file mô tả <b>hệ thống</b> hay mô tả <b>một việc đã hoặc đang làm</b>.</p>
+  <div class="eyebrow">Part 4</div>
+  <h2>Layer 3 · Artifact: memory that lives in the repo</h2>
+  <p class="lead">Split by one criterion: does the file describe the <b>system</b> or <b>one piece of work done or in progress</b>.</p>
 
   <div class="tablebox">
     <table>
-      <thead><tr><th></th><th>Artifact sản phẩm · <code>docs/product/</code></th><th>Artifact công việc · <code>.work/</code></th></tr></thead>
+      <thead><tr><th></th><th>Product artifacts · <code>docs/product/</code></th><th>Work artifacts · <code>.work/</code></th></tr></thead>
       <tbody>
-        <tr><td>Mô tả</td><td>Hệ thống, ở trạng thái hiện tại</td><td>Một việc: vì sao, như thế nào, đã học được gì</td></tr>
-        <tr><td>Cập nhật</td><td>Sửa tại chỗ, luôn phản ánh hiện tại</td><td>Ghi thêm, xong thì lưu trữ</td></tr>
-        <tr><td>Vòng đời</td><td>Theo hệ thống</td><td>Theo task hoặc sự kiện</td></tr>
-        <tr><td>Ai đọc</td><td>Dev mới, QA, PO: người cần hiểu hệ thống</td><td>Người review, người làm retro, người muốn biết vì sao</td></tr>
+        <tr><td>Describes</td><td>The system, in its current state</td><td>One piece of work: why, how, what was learned</td></tr>
+        <tr><td>Updated</td><td>Edited in place, always reflects the present</td><td>Appended to, archived when done</td></tr>
+        <tr><td>Lifecycle</td><td>Follows the system</td><td>Follows the task or event</td></tr>
+        <tr><td>Who reads</td><td>New devs, QA, PO: people who need to understand the system</td><td>Reviewers, people running a retro, people who want to know why</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="two">
 <pre>repo/
-├─ CLAUDE.md             quy ước · Test command
-│                        · đường dẫn .work/ tường minh
+├─ CLAUDE.md             conventions · Test command
+│                        · explicit .work/ path
 │
-├─ docs/product/         SẢN PHẨM · sửa tại chỗ
-│  ├─ requirements/      mã REQ ổn định + ví dụ
+├─ docs/product/         PRODUCT · edited in place
+│  ├─ requirements/      stable REQ codes + examples
 │  │   └─ checkout.md
-│  ├─ test-cases/        điều kiện test theo REQ
+│  ├─ test-cases/        test conditions per REQ
 │  │   └─ checkout.md
-│  ├─ architecture/      tổng quan, sơ đồ
-│  └─ decisions/         ADR · ghi thêm, không sửa bài cũ
+│  ├─ architecture/      overview, diagrams
+│  └─ decisions/         ADR · append, never edit old ones
 ├─ tests/                test_REQ_CHECKOUT_012_…
-├─ CHANGELOG.md          lịch sử sản phẩm
+├─ CHANGELOG.md          product history
 │
-└─ .work/                CÔNG VIỆC · ghi thêm, lưu trữ
-   ├─ tasks/             (commit vào git)
+└─ .work/                WORK · append, archive
+   ├─ tasks/             (committed to git)
    │   ├─ 2026-10-coupon-stacking/
-   │   │   ├─ spec.md       định nghĩa
-   │   │   └─ status.json   chặn · .gitignore
+   │   │   ├─ spec.md       definition
+   │   │   └─ status.json   block · .gitignore
    │   ├─ 2026-11-enrolment/
-   │   │   └─ map.md        yêu cầu lớn · không spec
+   │   │   └─ map.md        large request · no spec
    │   ├─ 2026-11-enrolment-s1/
    │   │   └─ spec.md       slice · ## In the map
    │   └─ 2026-11-enrolment-s2/ …
    ├─ test-plans/
    ├─ incidents/
-   └─ lessons.md         học · của project
+   └─ lessons.md         learn · the project's
 
-~/.claude/lessons.md     học · cách Claude làm việc</pre>
+~/.claude/lessons.md     learn · how Claude works</pre>
     <div class="flow">
-      <div class="cap">Một chiều: công việc thay đổi sản phẩm</div>
+      <div class="cap">One direction: work changes the product</div>
       <div class="fn l3"><code>.work/tasks/…/spec.md</code></div>
       <div class="fa">▼ "Done when"</div>
-      <div class="fn l3"><code>docs/product/requirements/</code> cập nhật</div>
+      <div class="fn l3"><code>docs/product/requirements/</code> updated</div>
       <div class="fa">&nbsp;</div>
       <div class="fn l3"><code>.work/incidents/…</code></div>
       <div class="fa">▼ postmortem</div>
-      <div class="fn l3"><code>docs/product/requirements/</code> thêm ví dụ · <code>tests/</code> thêm test</div>
+      <div class="fn l3"><code>docs/product/requirements/</code> gets an example · <code>tests/</code> gets a test</div>
       <div class="fa">▼ retro</div>
       <div class="fn l3"><code>.work/lessons.md</code></div>
-      <div class="note" style="margin-top:6px"><b>Sản phẩm không tham chiếu ngược về công việc.</b>Đọc <code>docs/product/</code> là thấy sự thật hiện tại, không phải lội qua lịch sử. Muốn biết vì sao thì sang <code>.work/</code>.</div>
+      <div class="note" style="margin-top:6px"><b>The product never refers back to the work.</b>Reading <code>docs/product/</code> shows the current truth, without wading through history. To learn why, go to <code>.work/</code>.</div>
     </div>
   </div>
 
   <div class="cards">
     <div class="card l3">
-      <h4><code>.work/</code> là thư mục ẩn</h4>
-      <p>Ripgrep, công cụ tìm kiếm bên dưới Claude Code, mặc định bỏ qua thư mục ẩn. CLAUDE.md ghi đường dẫn tường minh (<code>.work/lessons.md</code>) để Claude đọc thẳng, không phụ thuộc vào tìm kiếm.</p>
+      <h4><code>.work/</code> is a hidden folder</h4>
+      <p>Ripgrep, the search tool under Claude Code, skips hidden folders by default. CLAUDE.md gives the explicit path (<code>.work/lessons.md</code>) so Claude reads it directly, without depending on search.</p>
     </div>
     <div class="card l3">
-      <h4><code>status.json</code> không commit</h4>
-      <p>Do máy sinh và đổi mỗi lần chạy test, commit sẽ làm nhiễu diff. CI tự sinh lại khi cần. Chỉ lưu bản chụp cuối cùng khi task được lưu trữ.</p>
+      <h4><code>status.json</code> is not committed</h4>
+      <p>It is machine-generated and changes on every test run, so committing it would add noise to diffs. CI regenerates it when needed. Only the final snapshot is kept when the task is archived.</p>
     </div>
     <div class="card l3">
-      <h4>ADR nằm ở phía sản phẩm</h4>
-      <p>Sinh ra từ công việc, nhưng giải thích vì sao hệ thống được xây như vậy và sống cùng hệ thống, nên với gói lớp 2 đặt ở <code>docs/product/decisions/</code>. Repo không có gói thì dùng thư mục ADR sẵn có, chưa có thì Claude đề xuất <code>docs/decisions/</code> và chờ. Chỉ ghi thêm, không sửa ADR cũ: quyết định mới thay thế thì ghi ADR mới trỏ về ADR cũ.</p>
+      <h4>ADRs sit on the product side</h4>
+      <p>They come out of work, but they explain why the system is built the way it is and live with the system, so with the layer-2 kit they go in <code>docs/product/decisions/</code>. A repo without the kit uses its existing ADR folder; if there is none, Claude proposes <code>docs/decisions/</code> and waits. Append only, never edit an old ADR: when a new decision replaces one, write a new ADR that points back to the old one.</p>
     </div>
     <div class="card l3">
-      <h4>Đường dẫn là mặc định</h4>
-      <p>Cây thư mục bên trên là mặc định của <code>places.md</code> và của gói lớp 2. Project đổi được trong <code>CLAUDE.md</code>. Riêng repo có gói lớp 2 phải giữ <code>.work/</code>, vì CI <code>trace.yml</code> đọc <code>.work/tasks/*/spec.md</code>, chỉ sâu một cấp. Vì vậy slice nằm ngang hàng với folder của map chứ không lồng bên trong, và folder của map không có <code>spec.md</code> nên CI bỏ qua.</p>
+      <h4>Paths are defaults</h4>
+      <p>The tree above is the default of <code>places.md</code> and of the layer-2 kit. A project can change it in <code>CLAUDE.md</code>. A repo with the layer-2 kit must keep <code>.work/</code>, because the CI <code>trace.yml</code> reads <code>.work/tasks/*/spec.md</code>, only one level deep. That is why a slice sits beside the map's folder rather than nested inside it, and the map's folder has no <code>spec.md</code>, so CI skips it.</p>
     </div>
     <div class="card l3">
-      <h4>Không riêng phần mềm</h4>
-      <p>Video Studio cũng có hai phía. Sản phẩm: <code>videos/&lt;slug&gt;/storyboard.json</code>, <code>brand/</code>. Công việc: <code>.work/</code> với log từng video và lessons.</p>
+      <h4>Not only for software</h4>
+      <p>Video Studio also has two sides. Product: <code>videos/&lt;slug&gt;/storyboard.json</code>, <code>brand/</code>. Work: <code>.work/</code> with a log per video and lessons.</p>
     </div>
   </div>
 
   <div class="flow">
-    <div class="cap">Sợi chỉ REQ nối cả hai phía</div>
+    <div class="cap">The REQ thread joins both sides</div>
     <div class="split">
       <div class="flow">
         <div class="fn l3">product: requirement REQ-CHECKOUT-012</div>
@@ -704,9 +704,9 @@ spec slice từng nhánh: điều kiện → kết quả,
         <div class="fn l3">product: CHANGELOG "REQ-012: …"</div>
       </div>
       <div class="flow">
-        <div class="fn l3">work: spec.md · Changes: REQ-012 (mới)</div>
+        <div class="fn l3">work: spec.md · Changes: REQ-012 (new)</div>
         <div class="fn mech">work: status.json · REQ-012 ex1 pass</div>
-        <div class="fn l3">work: incident BUG-88 → REQ-012 thiếu case → lessons</div>
+        <div class="fn l3">work: incident BUG-88 → REQ-012 missing a case → lessons</div>
       </div>
     </div>
   </div>
@@ -716,58 +716,58 @@ spec slice từng nhánh: điều kiện → kết quả,
 
 <!-- =================================================== 5 -->
 <section id="example">
-  <div class="eyebrow">Phần 5</div>
-  <h2>Ví dụ đầu cuối</h2>
+  <div class="eyebrow">Part 5</div>
+  <h2>End-to-end examples</h2>
 
   <div class="two">
     <div class="sub">
-      <h3>A. Task thông thường (chỉ lớp 1)</h3>
-      <p class="lead">"So sánh 3 nhà cung cấp TTS cho Video Studio, làm qua nhiều buổi."</p>
+      <h3>A. An ordinary task (layer 1 only)</h3>
+      <p class="lead">"Compare 3 TTS providers for Video Studio, over several sessions."</p>
       <div class="flow">
-        <div class="fn l1">① Frame: Decide · "đúng" = tiêu chí đã thống nhất · đảo ngược được · bạn duyệt</div>
-        <div class="fn l1">② Context: tài liệu, bảng giá · lessons <code>#tts</code></div>
-        <div class="fn l1">③ Agree: tiêu chí giá, chất lượng tiếng Việt, API · G1 trọng số tự đặt <span class="gate">◀</span> · G4 nhiều buổi → <code>spec.md</code></div>
-        <div class="fn l1">④ Plan: G2, mỗi nhà cung cấp một bước <span class="gate">◀</span></div>
-        <div class="fn l1">⑤ Do: thử từng nhà cung cấp, mỗi bước báo một dòng: đã thử Google, Azure, CHƯA thử FPT</div>
-        <div class="fn l1">⑥ Verify: mẫu audio, số liệu giá (bằng chứng) · brief kèm khuyến nghị</div>
-        <div class="fn l1">⑦ Review: <code>review-work</code>, đối chiếu tiêu chí <span class="gate">◀</span></div>
-        <div class="fn l1">⑧ Learn: bất ngờ "ElevenLabs sai dấu tiếng Việt" → lessons <code>#tts</code></div>
+        <div class="fn l1">① Frame: Decide · "correct" = agreed criteria · reversible · you approve</div>
+        <div class="fn l1">② Context: documents, price tables · lessons <code>#tts</code></div>
+        <div class="fn l1">③ Agree: criteria for price, Vietnamese voice quality, API · G1 weights set by Claude <span class="gate">◀</span> · G4 several sessions → <code>spec.md</code></div>
+        <div class="fn l1">④ Plan: G2, one step per provider <span class="gate">◀</span></div>
+        <div class="fn l1">⑤ Do: try each provider, one line per step: tried Google, Azure, NOT yet FPT</div>
+        <div class="fn l1">⑥ Verify: audio samples, price figures (evidence) · brief with a recommendation</div>
+        <div class="fn l1">⑦ Review: <code>review-work</code>, checked against the criteria <span class="gate">◀</span></div>
+        <div class="fn l1">⑧ Learn: surprise "ElevenLabs gets Vietnamese tone marks wrong" → lessons <code>#tts</code></div>
       </div>
-      <div class="note"><b>Không có</b> mã REQ, test, status.json. Phần bảo vệ là bằng chứng và review.</div>
+      <div class="note"><b>Not present:</b> REQ codes, tests, status.json. The protection is evidence and review.</div>
     </div>
     <div class="sub">
-      <h3>B. Task phần mềm (lớp 1 + 2 + 3)</h3>
-      <p class="lead">"Cho phép dùng nhiều coupon trong một đơn."</p>
+      <h3>B. A software task (layers 1 + 2 + 3)</h3>
+      <p class="lead">"Allow several coupons in one order."</p>
       <div class="flow">
-        <div class="fn l2"><code>requirements</code>: REQ-012 (mới), REQ-005 (sửa) + ví dụ <span class="gate">◀ PO, dev, QA</span></div>
-        <div class="fn l1">① Frame: Deliver · sai thì: tính tiền sai</div>
+        <div class="fn l2"><code>requirements</code>: REQ-012 (new), REQ-005 (changed) + examples <span class="gate">◀ PO, dev, QA</span></div>
+        <div class="fn l1">① Frame: Deliver · if wrong: the amount charged is wrong</div>
         <div class="fn l1">② Context: applyCoupon, refund · lessons <code>#money</code></div>
-        <div class="fn l1">③ Agree: G1 "cộng hay nhân %" <span class="gate">◀</span> · G4 → <code>task-spec</code> → <code>spec.md</code> có Changes</div>
-        <div class="fn l2"><code>test-design</code>: biên 0%, 100%, coupon hết hạn</div>
-        <div class="fn l1">④ Plan: G2, ba thay đổi → Plan mode <span class="gate">◀</span></div>
-        <div class="fn l1">⑤ Mỗi bước: test fail → code · G3 trước khi đổi schema đơn hàng <span class="gate">◀</span> · mỗi thay đổi một commit</div>
+        <div class="fn l1">③ Agree: G1 "add or multiply the %" <span class="gate">◀</span> · G4 → <code>task-spec</code> → <code>spec.md</code> with Changes</div>
+        <div class="fn l2"><code>test-design</code>: boundaries 0%, 100%, expired coupon</div>
+        <div class="fn l1">④ Plan: G2, three changes → Plan mode <span class="gate">◀</span></div>
+        <div class="fn l1">⑤ Each step: test fails → code · G3 before changing the order schema <span class="gate">◀</span> · one commit per change</div>
         <div class="fn mech">⑥ Stop hook · mutation (verify-work) · CI · <code>trace-check</code> → <code>status.json</code></div>
-        <div class="fn l1">⑦ <code>reviewer</code>: thiếu ví dụ hoàn tiền một phần <span class="gate">◀</span></div>
-        <div class="fn l3">báo cáo · cập nhật <code>docs/product/requirements/checkout.md</code></div>
-        <div class="fn l1">⑧ <code>retro</code>: giả định "cộng %" sai → lessons <code>#money</code></div>
+        <div class="fn l1">⑦ <code>reviewer</code>: missing example for a partial refund <span class="gate">◀</span></div>
+        <div class="fn l3">report · update <code>docs/product/requirements/checkout.md</code></div>
+        <div class="fn l1">⑧ <code>retro</code>: wrong assumption "add the %" → lessons <code>#money</code></div>
       </div>
     </div>
   </div>
 
   <div class="sub">
-    <h3>C. Yêu cầu lớn: map và slice (từ 01/11)</h3>
-    <p class="lead">Một tin gồm 5 gạch đầu dòng: tự đăng ký lớp, xác thực email, giới hạn sĩ số, hàng chờ duyệt, mail thông báo. Ví dụ dựng để minh hoạ, chưa chạy thật.</p>
+    <h3>C. A large request: map and slice (from 1 Nov)</h3>
+    <p class="lead">One message with 5 bullets: self-registration for a class, email verification, a capacity limit, a waiting list for approval, a notification email. The example is built to illustrate, not run for real.</p>
     <div class="flow">
-      <div class="fn l1">① ② Frame, Context làm trong im lặng → khoảng 18 dòng: map S1–S5, phụ thuộc, vùng REQ, "Untouched: chấm điểm, học phí", Q1 lớp đầy thì chờ hay từ chối (rec: từ chối) · Q2 link xác thực sống bao lâu (rec: 24h) · Q3 mail gửi cho ai (rec: học viên + admin)</div>
-      <div class="fa"><span class="gate">◀ dừng 1 · bạn: <code>ok, Q1 chờ</code></span></div>
-      <div class="fn l1">S1 chạy đủ 8 bước → <code>DONE · S1 ✓ S2 ▶ S3 S4 S5</code> · <code>GET /enrol khi chưa đăng nhập → trước 404 → nay ra form</code> · <code>[decided]</code> thứ tự field · không dừng · S2 tương tự</div>
-      <div class="fn l1">S3 thêm cột <code>capacity</code>: G3, brief 6 dòng, đề xuất nullable, mặc định null</div>
-      <div class="fa"><span class="gate">◀ dừng 2 · bạn: <code>ok</code></span></div>
-      <div class="fn l1">S4: reviewer thấy hàng chờ dùng chung template mà S5 phải sửa → vượt ra ngoài map → map sửa lại, đánh dấu S5</div>
-      <div class="fa"><span class="gate">◀ dừng 3 · chỉ xảy ra khi có bất ngờ</span></div>
-      <div class="fn">S5 chạy · báo cáo cuối 8 dòng: 5 slice ✓, 2 <code>[decided]</code>, 1 <code>[unverified]</code> (chưa gọi được nhà cung cấp mail trong môi trường test)</div>
+      <div class="fn l1">① ② Frame, Context done silently → about 18 lines: map S1–S5, dependencies, REQ area, "Untouched: grading, tuition", Q1 when a class is full, wait or reject (rec: reject) · Q2 how long the verification link lives (rec: 24h) · Q3 who gets the mail (rec: student + admin)</div>
+      <div class="fa"><span class="gate">◀ stop 1 · you: <code>ok, Q1 wait</code></span></div>
+      <div class="fn l1">S1 runs all 8 steps → <code>DONE · S1 ✓ S2 ▶ S3 S4 S5</code> · <code>GET /enrol when not logged in → before 404 → now the form</code> · <code>[decided]</code> field order · no stop · S2 likewise</div>
+      <div class="fn l1">S3 adds a <code>capacity</code> column: G3, 6-line brief, recommends nullable, default null</div>
+      <div class="fa"><span class="gate">◀ stop 2 · you: <code>ok</code></span></div>
+      <div class="fn l1">S4: the reviewer sees the waiting list shares a template that S5 must change → outside the map → map revised, S5 marked</div>
+      <div class="fa"><span class="gate">◀ stop 3 · only when there is a surprise</span></div>
+      <div class="fn">S5 runs · final report of 8 lines: 5 slices ✓, 2 <code>[decided]</code>, 1 <code>[unverified]</code> (could not call the mail provider in the test environment)</div>
     </div>
-    <div class="note"><b>So với trước.</b>Cách mới: 2 lần dừng có kế hoạch, cộng 1 khi có bất ngờ, 7 tin nhắn, không tin nào quá 18 dòng. Cách cũ cho cùng việc này: khoảng 19 lần dừng, do ước tính chứ chưa đo. Mỗi slice là một PR nhỏ, review và debug riêng được.</div>
+    <div class="note"><b>Compared with before.</b>New way: 2 planned stops, plus 1 if there is a surprise, 7 messages, none over 18 lines. Old way for the same job: about 19 stops, estimated, not measured. Each slice is a small PR that can be reviewed and debugged on its own.</div>
   </div>
 </section>
 
@@ -775,32 +775,32 @@ spec slice từng nhánh: điều kiện → kết quả,
 
 <!-- =================================================== 6 -->
 <section id="status">
-  <div class="eyebrow">Phần 6</div>
-  <h2>Hiện trạng và thứ tự xây</h2>
+  <div class="eyebrow">Part 6</div>
+  <h2>Status and build order</h2>
   <div class="tablebox">
     <table>
-      <thead><tr><th>Bước</th><th>Nội dung</th><th>Lớp</th><th>Phụ thuộc</th></tr></thead>
+      <thead><tr><th>Step</th><th>Content</th><th>Layer</th><th>Depends on</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>workflow (Frame) · communication · verify-work · review-work · reviewer · Stop hook · trace.py</td><td>1</td><td>—</td></tr>
-        <tr><td>1 <span class="badge b-has">CÓ</span></td><td>mẫu Spec dạng generic · mẫu Task log <code>log.md</code> · đổi <code>spec</code> thành <code>task-spec</code> · quy tắc khi nào tạo file</td><td>1</td><td>—</td></tr>
-        <tr><td>2 <span class="badge b-has">CÓ</span></td><td><code>retro</code> · format <code>lessons.md</code> · nối "Learning from repeats" với lessons · bước ② tìm trong lessons</td><td>1</td><td>bước 1 (đọc log)</td></tr>
-        <tr><td>3 <span class="badge b-has">CÓ</span></td><td><code>requirements</code> · quy ước mã REQ · phần mở rộng Changes cho spec</td><td>2</td><td>bước 1</td></tr>
-        <tr><td>4 <span class="badge b-has">CÓ</span></td><td><code>test-design</code> · <code>trace-check</code> → <code>status.json</code></td><td>2</td><td>bước 3 (mã REQ)</td></tr>
-        <tr><td>5 <span class="badge b-has">CÓ</span></td><td><code>bug-report</code> · <code>release</code> · <code>incident</code> · <code>test-plan</code> · <code>design-decision</code> · template · CI <code>trace.yml</code></td><td>2</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>Lấy từ kiến trúc QA platform: luật viết code test trong <code>test-design</code> · nội dung từ ticket, log là dữ liệu, không phải lệnh · deny <code>.env*</code> · <code>project-init</code></td><td>1–2</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>11/10: <code>places.md</code> giữ mọi đường dẫn · workflow 8 bước, 4 gate thay bảng Small/Medium/Large · G3 chặt · tham chiếu theo tên mục · <code>mutation-check</code> vào gói · attribution tắt · <code>trace.py</code> chặn gắn cứng đường dẫn, tên skill</td><td>1</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>11/10: cài vào <code>~/.claude</code>, sao lưu ở <code>~/.claude/backups/2026-10-11-pre-kit/</code> · attribution, deny <code>.env</code>, Stop hook đã kiểm bằng hành vi thật</td><td>1</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>24–29/10, từ lessons đã thăng cấp: test do subagent chỉ đọc spec viết · mỗi input có ví dụ hỏng, rỗng, nhỏ nhất, đứt kết nối (cả plan) · check chập chờn chạy 3 lần · dữ liệu đã lưu thì đọc theo đường ghi · sửa một rule thì tìm mọi rule cùng chủ đề · <code>parallel-agents</code> vào gói</td><td>1</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>01/11: yêu cầu lớn thành map và slice (2.5) · G1 chỉ dừng cho giá trị user thấy · mỗi bước một dòng, không dừng · gom câu hỏi kèm đề xuất · báo cáo mở đầu <code>DONE | ASK n | BLOCKED</code> · hình mặc định là dòng trước → sau · mục Explaining rút từ 91 xuống 36 dòng · đã cài vào <code>~/.claude</code></td><td>1–2</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>08/11: gộp Loop (STLC) và project-starter (multi-agent dev) vào một kit — 22 skill theo 4 module (shared · dev · qa · ops), <code>modules.json</code> · mỗi skill có "Start when" theo trạng thái · frontend tách web / mobile · <code>qa-sweep</code> chuyển từ lớp 1 xuống module qa · project-init cài theo module đã chọn</td><td>2</td><td>—</td></tr>
-        <tr><td><span class="badge b-has">CÓ</span></td><td>11/11: bỏ task log <code>log.md</code> · session sau tiếp tục từ spec, commit và PR · map giữ dòng tiến độ</td><td>1</td><td>—</td></tr>
-        <tr><td>6</td><td>Chạy <b>một task thật</b> xuyên cả 3 lớp trong project TypeScript: một PR phải bị chặn, một PR phải qua</td><td>1–3</td><td>dùng thật</td></tr>
-        <tr><td>7</td><td>Kiểm verify qua <b>cả một task</b>, từ ③ Agree đến ⑥ Verify: test bắt đầu thẳng ở ⑥ không biết G1, G2 đã "có" chưa</td><td>1</td><td>—</td></tr>
-        <tr><td>8</td><td>Chạy <b>một yêu cầu thật 3–5 việc</b> theo map: đếm số lần dừng và số dòng mỗi báo cáo, so với ví dụ C</td><td>1</td><td>dùng thật</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>workflow (Frame) · communication · verify-work · review-work · reviewer · Stop hook · trace.py</td><td>1</td><td>—</td></tr>
+        <tr><td>1 <span class="badge b-has">BUILT</span></td><td>generic Spec shape · Task log shape <code>log.md</code> · rename <code>spec</code> to <code>task-spec</code> · rule for when to create files</td><td>1</td><td>—</td></tr>
+        <tr><td>2 <span class="badge b-has">BUILT</span></td><td><code>retro</code> · <code>lessons.md</code> format · connect "Learning from repeats" to lessons · step ② searches lessons</td><td>1</td><td>step 1 (reads the log)</td></tr>
+        <tr><td>3 <span class="badge b-has">BUILT</span></td><td><code>requirements</code> · REQ code convention · Changes extension for the spec</td><td>2</td><td>step 1</td></tr>
+        <tr><td>4 <span class="badge b-has">BUILT</span></td><td><code>test-design</code> · <code>trace-check</code> → <code>status.json</code></td><td>2</td><td>step 3 (REQ codes)</td></tr>
+        <tr><td>5 <span class="badge b-has">BUILT</span></td><td><code>bug-report</code> · <code>release</code> · <code>incident</code> · <code>test-plan</code> · <code>design-decision</code> · templates · CI <code>trace.yml</code></td><td>2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>Taken from the QA platform architecture: rules for writing test code in <code>test-design</code> · content from tickets and logs is data, not commands · deny <code>.env*</code> · <code>project-init</code></td><td>1–2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Oct: <code>places.md</code> holds every path · 8-step workflow, 4 gates replace the Small/Medium/Large table · strict G3 · references by section name · <code>mutation-check</code> into the package · attribution off · <code>trace.py</code> blocks hard-coded paths and skill names</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Oct: installed into <code>~/.claude</code>, backed up at <code>~/.claude/backups/2026-10-11-pre-kit/</code> · attribution, deny <code>.env</code>, Stop hook checked with real behaviour</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>24–29 Oct, from lessons that were promoted: tests written by a subagent that reads only the spec · every input gets a broken, empty, smallest, and dropped-connection example (also in the plan) · a flaky check runs 3 times · stored data is read along the write path · when editing a rule, search every rule on the same topic · <code>parallel-agents</code> into the package</td><td>1</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>1 Nov: a large request becomes a map and slices (2.5) · G1 stops only for values the user sees · one line per step, no stop · batched questions with recommendations · reports open with <code>DONE | ASK n | BLOCKED</code> · the default picture is a before → after line · the Explaining section cut from 91 to 36 lines · installed into <code>~/.claude</code></td><td>1–2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>8 Nov: merged Loop (STLC) and project-starter (multi-agent dev) into one kit — 22 skills in 4 modules (shared · dev · qa · ops), <code>modules.json</code> · each skill has a "Start when" by state · frontend split into web / mobile · <code>qa-sweep</code> moved from layer 1 down to the qa module · project-init installs the chosen modules</td><td>2</td><td>—</td></tr>
+        <tr><td><span class="badge b-has">BUILT</span></td><td>11 Nov: dropped the task log <code>log.md</code> · a later session continues from the spec, commits and PR · the map keeps the progress line</td><td>1</td><td>—</td></tr>
+        <tr><td>6</td><td>Run <b>one real task</b> through all 3 layers in a TypeScript project: one PR must be blocked, one must pass</td><td>1–3</td><td>real use</td></tr>
+        <tr><td>7</td><td>Test verify across <b>a whole task</b>, from ③ Agree to ⑥ Verify: a test that starts directly at ⑥ does not know whether G1 and G2 were "yes"</td><td>1</td><td>—</td></tr>
+        <tr><td>8</td><td>Run <b>one real request of 3–5 pieces of work</b> through a map: count the stops and the lines per report, compare with example C</td><td>1</td><td>real use</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="note"><b>Đã xây đủ 3 lớp và cài lớp 1; chưa qua task thật nào.</b>Lớp 2 nằm trong <code>project-kit/</code> của gói. <code>trace-check</code> đã qua 27 test, 33 lỗi cố ý đều bị bắt, và một lần chạy thử trong repo git tạm với JUnit thật từ Node. Chưa kiểm được: định dạng JUnit của Vitest, Jest, Playwright và workflow trên GitHub.</div>
+  <div class="note"><b>All 3 layers are built and layer 1 is installed; no real task has gone through yet.</b>Layer 2 is in the package's <code>project-kit/</code>. <code>trace-check</code> has passed 27 tests, all 33 planted faults were caught, and it ran once in a temporary git repo with real JUnit from Node. Not yet checked: the JUnit format of Vitest, Jest, Playwright, and the workflow on GitHub.</div>
 </section>
 
 </div>
