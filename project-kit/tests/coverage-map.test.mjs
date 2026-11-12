@@ -1344,7 +1344,7 @@ test('E38: the audit roots and the Trips branches keep a fixed order', () => {
 })
 
 // ------------------------------------------------------------------ project overview (E37–E44)
-// Spec section "Bổ sung 2026-10-25: trang Project overview". These E37–E39 are
+// Spec section "Addendum 2026-10-25: the Project overview page". These E37–E39 are
 // that section's; the E37–E39 above are the requirements-audit spec's.
 //
 // Fixture, four roots (expected numbers below are counted from it by hand):
@@ -1971,7 +1971,7 @@ test('RT3: an entry whose AC is not in the current documents is listed, its ID n
 })
 
 // The #drift pane for RT as the page drew it before the re-read card existed
-// (captured on commit 65e502c). "Không có --since → trang ... như hôm nay".
+// (captured on commit 65e502c). "Without --since → the page ... as it is today".
 const RT_DRIFT_BEFORE =
   '<h1>ACs the code does differently</h1>' +
   '<p class="lead">The code does something other than the AC. The recommendations are Claude’s; the product owner decides.</p>' +
@@ -3387,7 +3387,7 @@ test(
   }
 )
 
-// K16–K19: the spec's "Bổ sung 03/11" (after the review and the project-init run).
+// K16–K19: the spec's "Addendum 3 Nov" (after the review and the project-init run).
 
 const NEEDS_TS5 = (has) =>
   `coverage-map needs the TypeScript 5 compiler API; this project has ${has}. Install typescript@5 (npm i -D typescript@5)`

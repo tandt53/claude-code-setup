@@ -15,7 +15,7 @@ switched off, and then protects nothing.
 | Plan mode | No file edits before you approve the plan | That the plan is any good | manual, below |
 | Stop hook `require_tests.py` | The project's tests ran after the last code edit in the turn | That they passed, or that they test the right thing | **automated**: 22 tests + mutation check |
 | SessionStart hook `after_compact.py` | After a compaction, Claude is told which loaded skills changed on disk and which language the user writes in | That Claude loads them again, or replies in that language | **automated**: 21 tests + 17 mutants; live run below |
-| UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?" still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
+| UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
 | Deny rules for `.env*` | Claude's file tools and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files under the working directory | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder | manual, below |
 
@@ -266,11 +266,12 @@ reproduced.
 **Why.** The user rarely says when an explanation did not land, and silence,
 `ok` or a pick was read as understanding. In one session (8–10/11/2026) the
 user decided three times before understanding the issue and asked about it
-afterwards: wrote "xem xét bỏ qa-sweep", then "qa-sweep được dùng khi nào
-trong SDLC?", and once told, kept it; approved the measurement tools and their
-pull request, then asked what churn, trace_rollup, compare, judge and history
-are; picked the Appium 4 upgrade, then asked "Vấn đề ios typing là gì?", and
-the upgrade was rolled back. The Communication rule on briefs ("if they must
+afterwards: wrote "xem xét bỏ qa-sweep" (consider dropping qa-sweep), then
+"qa-sweep được dùng khi nào trong SDLC?" (when is qa-sweep used in the SDLC?),
+and once told, kept it; approved the measurement tools and their pull
+request, then asked what churn, trace_rollup, compare, judge and history are;
+picked the Appium 4 upgrade, then asked "Vấn đề ios typing là gì?" (what is
+the iOS typing problem?), and the upgrade was rolled back. The Communication rule on briefs ("if they must
 ask what this is about, the brief did not happen") was in the context each
 time and was not acted on.
 
@@ -285,15 +286,18 @@ Merge the `UserPromptSubmit` entry of `settings.snippet.json` into
 **Enforces.** When the text the user typed (pasted blocks, system reminders,
 code fences, harness notices and messages from other Claude sessions left
 out) asks what something is, why, how it differs, when it is used, or whether
-they read it right ("là gì", "tại sao", "khác gì", "khi nào", "đúng ko", "…
-ah?", and the English forms), the context gets one reminder quoting the
+they read it right (Vietnamese "là gì" what is, "tại sao" why, "khác gì" how
+does it differ, "khi nào" when, "đúng ko" right?, a closing "… ah?", and the
+English forms), the context gets one reminder quoting the
 matched phrase: if the question builds correctly, confirm it and go one level
 deeper; otherwise answer from one real case, explain another way if it was
 explained before, and restate any pick that rested on it and ask whether it
 still holds. A question pattern counts only in a sentence that ends in "?", so
-an instruction ("Chạy test khi nào xong thì báo") does not fire. A next step
-("tiếp theo là gì ?"), a status ("s22 code xong rồi ah ?") or a plan ("ta cần
-làm gì ?") in the same sentence cancels the match. `??` gets a reminder to say
+an instruction ("Chạy test khi nào xong thì báo", run the tests and tell me
+when they finish) does not fire. A next step ("tiếp theo là gì ?", what's
+next?), a status ("s22 code xong rồi ah ?", is the s22 code done?) or a plan
+("ta cần làm gì ?", what do we need to do?) in the same sentence cancels the
+match. `??` gets a reminder to say
 the last message again another way. It never blocks: any error, a missing
 `after_compact.py` or `python3 -I` exits 0 without a traceback.
 
@@ -304,7 +308,8 @@ this one included), the first
 version fired on 185 (16.5%), about half of a random 30 of them not gaps (next
 steps, status questions, instructions); this version fires on 149 (13.3%), and
 in a random 30 of those about 6 are not gaps (status questions such as "Vẫn
-đang chạy đúng ko?" or "layout bị dính ah?", a complaint). Those labels are
+đang chạy đúng ko?", still running, right?, or "layout bị dính ah?", is the
+layout overlapping?, a complaint). Those labels are
 Claude's. The reminder tells Claude to just answer such a message. The other
 half of the rule, one check question before Claude asks for a decision,
 happens in Claude's own message, where no prompt hook looks: it stays with
@@ -318,7 +323,8 @@ cd hooks && python3 -m unittest test_gap_question.py -v
 above, plus the status and next-step questions the review found in earlier
 sessions), labelled by hand; 8 written gap cases, one for each pattern no real
 message exercises alone, and 6 written plain ones (instructions without "?",
-"tiếp theo làm gì ?", "what's next?"); a known false positive that still
+"tiếp theo làm gì ?" (what to do next?), "what's next?"); a known false
+positive that still
 fires; `??` alone, with spaces or with text after it; pasted blocks, system
 reminders, code fences, harness notices and another session's message not
 read; bad input (empty, not JSON, a list, `{}`, a JSON string, a non-string,
@@ -349,12 +355,13 @@ a subagent's report that quoted "là gì", which is why messages from other
 sessions are now skipped.
 
 **Checked** with Claude Code 2.1.261, headless (`claude -p --settings` holding
-only this hook). For "slice C3-ii là gì?" the transcript holds an `attachment`
-of type `hook_additional_context` (hookEvent `UserPromptSubmit`) with the
-reminder, and the model, asked to quote any hook reminder, gave its first
-twelve words. For a plain message ("Viết đúng chữ: xin chào …") it answered
-"KHÔNG CÓ". Registered in `~/.claude/settings.json` instead, the same "slice
-C3-ii là gì?" run (one turn) quoted the reminder too. In one run that first
+only this hook). For "slice C3-ii là gì?" (what is slice C3-ii?) the
+transcript holds an `attachment` of type `hook_additional_context` (hookEvent
+`UserPromptSubmit`) with the reminder, and the model, asked to quote any hook
+reminder, gave its first twelve words. For a plain message ("Viết đúng chữ:
+xin chào …", write exactly: hello …) it answered "KHÔNG CÓ" (none).
+Registered in `~/.claude/settings.json` instead, the same "slice C3-ii là
+gì?" run (one turn) quoted the reminder too. In one run that first
 made tool calls ("qa-sweep được dùng khi nào? …", six turns), the transcript
 held the reminder but the model answered that there was none: being in the
 context does not mean it is noticed (one run). After the review fixes, from

@@ -114,8 +114,8 @@ stand, but that was known only after opening it.
 - Say to run checks in the foreground: the named test classes while working, the whole
   suite once at the end. An agent that ends its turn with a run still going is listed as
   completed while that run holds the build folder, and the user sees nothing running.
-  Seen: a test writer left `mvn test` going, and the user wrote "tôi ko thấy agent nào
-  đang chạy". (The verify skill holds the same time limit for mutation runs.)
+  Seen: a test writer left `mvn test` going, and the user wrote that they could see no
+  agent running. (The verify skill holds the same time limit for mutation runs.)
 - Ask for what you actually need back: the manifest, what was implemented, the test
   count, and **what the specification left ambiguous with the choice made**. That last
   one surfaces at review the decisions you would otherwise discover at integration.
