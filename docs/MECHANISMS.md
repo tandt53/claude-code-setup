@@ -16,6 +16,7 @@ switched off, and then protects nothing.
 | Stop hook `require_tests.py` | The project's tests ran after the last code edit in the turn | That they passed, or that they test the right thing | **automated**: 22 tests + mutation check |
 | SessionStart hook `after_compact.py` | After a compaction, Claude is told which loaded skills changed on disk and which language the user writes in | That Claude loads them again, or replies in that language | **automated**: 21 tests + 17 mutants; live run below |
 | UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
+| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value) is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; secrets in files Claude reads | 18 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
 | Deny rules for `.env*` | Claude's file tools and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files under the working directory | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder | manual, below |
 
@@ -376,6 +377,105 @@ user settings: "slice C3-ii là gì? …" still had the reminder quoted, and
 **Not yet checked:** whether the reminder changes what Claude does, that is,
 whether it reopens an earlier pick in a real conversation; how often it goes
 unnoticed after tool calls; the interactive session.
+
+## 7. UserPromptSubmit hook → a secret in a message never reaches Claude
+
+**Why.** A key pasted with a log, a curl command or a config file goes to the
+model with the message. The deny rules (section 4) stop Claude reading `.env`
+files; nothing stopped a person from pasting one.
+
+**Install.**
+```bash
+cp hooks/secret_guard.py ~/.claude/hooks/
+```
+Merge the `secret_guard.py` entry of `UserPromptSubmit` in
+`settings.snippet.json` into `~/.claude/settings.json`. Needs `python3` on
+PATH. gitleaks is optional: when it is on PATH (`brew install gitleaks`), it
+adds a second layer.
+
+**Enforces.** Every message, pasted blocks included, is read before it is
+sent. These forms block it:
+- GitHub tokens, Anthropic keys, AWS access key ids, private key blocks and
+  JWTs;
+- a credential header (`Authorization`, `X-API-Key`, `X-Auth-Token` and the
+  like) or a session cookie whose value looks real: 16 characters or more,
+  letters and digits, not a placeholder such as `$TOKEN`, `${TOKEN}` or
+  `<your-key>`;
+- a `Basic` header that decodes to `user:password`.
+
+The block message names each one by line and kind with the middle of the
+value masked (`ghp_Ab…Yz12`), and leaves the message text out of itself
+(`suppressOriginalPrompt`). With gitleaks installed, the message also goes to
+`gitleaks stdin` for at most 2 seconds: a rule for one of the forms above
+blocks, and any other rule (such as `generic-api-key`) only warns. When
+gitleaks is missing, fails or is too slow, the patterns decide alone.
+
+`[secret-ok]` at the start of a message sends it anyway, with a warning.
+`CLAUDE_SKIP_SECRET_GUARD=1` turns the hook off. Input the hook cannot read,
+or an error of its own, lets the message through with a warning that it was
+not scanned.
+
+**Does not enforce.**
+- **That the secret stays off the disk.** This event cannot rewrite a
+  message, only stop it, and Claude Code's documentation says a blocked
+  message may still be saved locally (session transcript, prompt history).
+  Measured: the transcript of a blocked headless run held the full message
+  once, in a `queue-operation` entry. The hook keeps a secret from Claude, not
+  off the machine: rotate a key that was pasted.
+- **Secrets of other forms.** A password in prose, or a provider key with no
+  fixed prefix, is caught only by gitleaks, and then only as a warning.
+- **Secrets in images or attached files**, or in files and command output
+  Claude reads (section 4 and review cover those).
+
+**Automated tests.**
+```bash
+cd hooks && python3 -m unittest test_secret_guard.py -v
+```
+18 tests. Every key is fake and built at run time, so the test file holds
+nothing a scanner takes for a key.
+- **Blocks:** each of the six key kinds; a key inside a pasted block (named by
+  its line); five header forms (a curl bearer token, a raw `x-api-key` line,
+  a long and a short `Basic` value, a session cookie, a header in code); the
+  masked value shown; every secret of a message listed.
+- **Passes silently:** 17 ordinary messages, among them a sentence about a
+  token's format, AWS's sample key, a PEM header line with no key,
+  placeholders with and without digits, a dummy value, a harmless cookie, a
+  commit hash, a UUID and the word "authorization" in prose. An empty message
+  passes too.
+- **The way out:** `[secret-ok]` first or after an IDE context block passes
+  with a warning; `[secret-ok]` further down still blocks; the environment
+  switch passes.
+- **gitleaks:**
+  - Missing: the patterns still block.
+  - A generic finding warns; a finding for a key form the patterns missed
+    blocks.
+  - Hanging: given up in time. Failing: the patterns decide.
+  - The real binary, when installed, agrees and answers in under 2 s.
+- **Broken input** (not JSON, a list, a non-string prompt, no prompt, nothing)
+  goes through with a "could not scan" warning.
+
+Checked the checks: 18 mutants, each removing one rule from a copy of the
+hook (pasted blocks skipped, the original prompt kept, no masking, AWS's
+sample key blocked, placeholders or dummy values taken for keys, Basic not
+decoded, any cookie counted, headers ignored, JWTs unknown, gitleaks not
+given up, a generic finding blocking, a certain one ignored, the way out
+read anywhere or missed after an IDE block, the switch ignored, broken input
+blocked, line numbers off by one). The first run let one survive: the dummy
+value `xxxx…` was already a placeholder, so the distinct-character rule was
+never exercised; a case now covers it. 18 of 18 make a test fail.
+
+**Checked** with Claude Code 2.1.261, headless (`claude -p --settings`
+holding only this hook):
+- **A fake GitHub token:** blocked with 0 model turns and no cost. The result
+  showed `line 1: GitHub token ghp_zy…y3Rn`, with no `Original prompt` and no
+  full key.
+- **`[secret-ok]` first:** the message reached the model, and the transcript
+  holds the warning as a `hook_system_message` attachment.
+- **`API_SECRET=<40 random characters>`:** gitleaks' `generic-api-key` sent
+  the message with a `hook_system_message` warning naming line 1.
+
+**Not yet checked:** how the warnings look in the interactive session, and
+whether the interactive prompt history keeps a blocked message.
 
 ---
 
