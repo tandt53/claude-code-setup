@@ -474,8 +474,21 @@ holding only this hook):
 - **`API_SECRET=<40 random characters>`:** gitleaks' `generic-api-key` sent
   the message with a `hook_system_message` warning naming line 1.
 
-**Not yet checked:** how the warnings look in the interactive session, and
-whether the interactive prompt history keeps a blocked message.
+**Checked** in an interactive session (14 Nov 2026), with a fake token typed
+into the prompt:
+- The message never reached Claude.
+- The user saw the block message as written, under Claude Code's own line
+  "UserPromptSubmit operation blocked by hook:": `line 1: GitHub token
+  ghp_33…3123`, then the `[secret-ok]` hint and the note that the text may
+  stay on the machine.
+- The transcript holds that message as a `system` entry, plus two
+  `queue-operation` entries for the prompt.
+- Pasting the block message back as a new message passed: the masked value
+  is too short to match.
+
+**Not yet checked:** how a warning (`[secret-ok]`, a generic gitleaks
+finding, "could not scan") looks in the interactive session, and whether the
+interactive prompt history keeps a blocked message.
 
 ---
 

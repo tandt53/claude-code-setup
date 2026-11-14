@@ -90,10 +90,17 @@ PLAIN = [
 
 
 def fake_gitleaks(directory, body):
-    """A `gitleaks` executable in directory whose behaviour is the Python body."""
+    """A `gitleaks` executable in directory whose behaviour is the Python body.
+
+    It is run once before it is returned. macOS can take seconds over the first
+    run of a new executable (measured: 0.03 s to 3.06 s under load, then 0.02 s),
+    and that first run must not land inside the hook's 2-second limit."""
     exe = Path(directory) / "gitleaks"
-    exe.write_text(f"#!{sys.executable}\nimport json, sys, time\nsys.stdin.read()\n{body}\n")
+    exe.write_text(f"#!{sys.executable}\nimport json, os, sys, time\n"
+                   f"if os.environ.get('FAKE_GITLEAKS_WARMUP'): sys.exit(0)\n"
+                   f"sys.stdin.read()\n{body}\n")
     exe.chmod(0o755)
+    subprocess.run([str(exe)], env={**os.environ, "FAKE_GITLEAKS_WARMUP": "1"}, timeout=30, check=True)
     return exe
 
 
