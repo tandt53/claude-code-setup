@@ -28,7 +28,7 @@ FIXTURE = [
                       "content": [
                           {"type": "text", "text": "Fixed: a typo. Result [unverified] until CI."},
                           {"type": "tool_use", "name": "Bash",
-                           "input": {"command": "python3 docs/trace.py && git commit -m x"}}]}}),
+                           "input": {"command": "python3 -m unittest discover -s hooks && git commit -m x"}}]}}),
     line({"type": "assistant", "timestamp": "2026-11-08T01:02:00Z",
           "message": {"role": "assistant",
                       "usage": {"output_tokens": 30},
@@ -78,6 +78,61 @@ class CrawlTest(unittest.TestCase):
     def test_broken_line_is_skipped_not_fatal(self):
         # The invalid json line did not raise; metrics still computed.
         self.assertIsInstance(self.m, dict)
+
+
+def user(text, **flags):
+    return line({"type": "user", **flags, "message": {"role": "user", "content": text}})
+
+
+def queued(text, kind):
+    mode = "prompt" if kind in ("human", "peer") else "task-notification"
+    return line({"type": "attachment", "attachment": {
+        "type": "queued_command", "prompt": text, "commandMode": mode, "origin": {"kind": kind}}})
+
+
+def bash(cmd):
+    return line({"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "tool_use", "name": "Bash", "input": {"command": cmd}}]}})
+
+
+class UserPromptsTest(unittest.TestCase):
+    def test_only_messages_a_person_typed_count(self):
+        lines = [
+            user("please fix the login"),                        # typed
+            user("<command-name>/clear</command-name>"),         # a slash command, typed
+            queued("and update the docs too", "human"),          # typed while Claude worked
+            user("text of a skill loaded into the context", isMeta=True),
+            user("<task-notification><task-id>a1</task-id></task-notification>"),
+            user("<local-command-stdout>cleared</local-command-stdout>"),
+            user("This session is being continued from a previous conversation",
+                 isCompactSummary=True),
+            user("[Request interrupted by user for tool use]"),
+            queued("a message from another Claude session", "peer"),
+            queued("<task-notification><task-id>a2</task-id></task-notification>",
+                   "task-notification"),
+        ]
+        self.assertEqual(crawl(lines)["user_prompts"], 3)
+
+
+class TestRunsTest(unittest.TestCase):
+    def test_common_runners_count_and_other_commands_do_not(self):
+        lines = [
+            bash("npm run test:unit 2>&1 | tail -15"),
+            bash("npx jest src/cart.test.ts"),
+            bash("cd web && yarn test"),
+            bash("go test ./..."),
+            bash("npm run build"),
+            bash("git commit -m 'add a test for the cart'"),
+            bash("ls tests/"),
+        ]
+        self.assertEqual(crawl(lines)["test_runs"], 4)
+
+    def test_the_projects_declared_command_counts(self):
+        lines = [bash("make verify"), bash("make build")]
+        self.assertEqual(crawl(lines, test_commands=["make verify"])["test_runs"], 1)
+
+    def test_one_command_counts_once(self):
+        self.assertEqual(crawl([bash("npm test && npx jest src/a.test.ts")])["test_runs"], 1)
 
 
 if __name__ == "__main__":

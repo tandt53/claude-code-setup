@@ -65,8 +65,12 @@ def _git_branch(lines: list[str]) -> str | None:
 
 
 def build_snapshot(lines, *, session_id, project, cwd, crawl) -> dict:
-    """The per-session record written to the store. Pure given `crawl`."""
-    m = crawl.crawl(lines)
+    """The per-session record written to the store. Pure given `crawl`, apart
+    from reading the project's declared test command at cwd."""
+    if hasattr(crawl, "declared_test_commands"):
+        m = crawl.crawl(lines, test_commands=crawl.declared_test_commands(cwd))
+    else:  # an older crawl.py installed beside a newer hook
+        m = crawl.crawl(lines)
     return {
         "session_id": session_id,
         "project": project,
