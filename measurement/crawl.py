@@ -27,6 +27,8 @@ from pathlib import Path
 
 
 SKILL_FILE = re.compile(r"skills/([a-z0-9][a-z0-9-]*)/SKILL\.md")
+SKILL_READ_BASH = re.compile(
+    r"\b(?:cat|head|tail|less|more|bat|sed\s+-n)\b[^|;&<>]*?skills/([a-z0-9][a-z0-9-]*)/SKILL\.md")
 
 # A user line that starts with one of these was written by Claude Code, not typed.
 NOT_TYPED = ("<task-notification", "<local-command", "[Request interrupted")
@@ -177,10 +179,12 @@ def crawl(lines, test_commands=()):
                     skill = inp.get("skill")
                     if skill:
                         m["skills_loaded"].append(skill.split(":")[-1])
-                else:
-                    # A skill read straight from its file (Read, or cat in Bash) is a load too.
-                    for read in SKILL_FILE.findall(json.dumps(inp)):
-                        m["skills_loaded"].append(read)
+                elif name == "Read":
+                    # A skill read straight from its file is a load too.
+                    m["skills_loaded"].extend(SKILL_FILE.findall(str(inp.get("file_path") or "")))
+                elif name == "Bash":
+                    # So is cat, head or sed -n on it; an edit, grep or git diff of it is not.
+                    m["skills_loaded"].extend(SKILL_READ_BASH.findall(str(inp.get("command") or "")))
                 if name == "WebSearch":
                     m["web_searches"] += 1
                 elif name == "AskUserQuestion":

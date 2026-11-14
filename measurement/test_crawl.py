@@ -90,9 +90,33 @@ def queued(text, kind):
         "type": "queued_command", "prompt": text, "commandMode": mode, "origin": {"kind": kind}}})
 
 
-def bash(cmd):
+def tool(name, **inp):
     return line({"type": "assistant", "message": {"role": "assistant", "content": [
-        {"type": "tool_use", "name": "Bash", "input": {"command": cmd}}]}})
+        {"type": "tool_use", "name": name, "input": inp}]}})
+
+
+def bash(cmd):
+    return tool("Bash", command=cmd)
+
+
+class SkillsLoadedTest(unittest.TestCase):
+    def test_a_skill_read_counts_and_a_skill_edited_does_not(self):
+        lines = [
+            tool("Skill", skill="plugin:verify-work"),
+            tool("Read", file_path="/w/.claude/skills/bug-report/SKILL.md"),
+            bash("cd /w && cat .claude/skills/api-contract/SKILL.md"),
+            bash("sed -n '1,40p' skills/retro/SKILL.md"),
+            # Working on a skill's file is not loading it.
+            tool("Edit", file_path="/w/skills/retro/SKILL.md", old_string="a", new_string="b"),
+            tool("Write", file_path="/w/skills/new-one/SKILL.md", content="x"),
+            bash("sed -i '' 's/a/b/' skills/retro/SKILL.md"),
+            bash("grep -n Seen skills/retro/SKILL.md"),
+            bash("git diff -- skills/retro/SKILL.md"),
+            bash("cat > skills/new-one/SKILL.md <<'EOF'\nx\nEOF"),
+            tool("Agent", prompt="read skills/retro/SKILL.md before you start"),
+        ]
+        self.assertEqual(crawl(lines)["skills_loaded"],
+                         ["verify-work", "bug-report", "api-contract", "retro"])
 
 
 class UserPromptsTest(unittest.TestCase):
