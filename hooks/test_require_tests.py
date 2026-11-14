@@ -80,6 +80,15 @@ class HookTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("Test command:", msg)
 
+    def test_blocks_a_docs_folder_that_is_part_of_the_code(self):
+        # A web app can serve app/docs/page.tsx at /docs: app/ is no package root.
+        entries = [prompt("fix the docs page"), *edit("app/docs/page.tsx")]
+        self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 2)
+
+    def test_blocks_a_code_file_named_docs(self):
+        entries = [prompt("fix"), *edit("src/docs.ts")]
+        self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 2)
+
     def test_earlier_turn_tests_do_not_count(self):
         entries = [prompt("one"), *edit("a.ts"), *bash("npm test"), prompt("two"), *edit("a.ts")]
         self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 2)
@@ -105,6 +114,18 @@ class HookTest(unittest.TestCase):
 
     def test_allows_docs_only_edits(self):
         entries = [prompt("docs"), *edit("README.md"), *edit("docs/guide.md")]
+        self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 0)
+
+    def test_allows_any_file_in_the_docs_folder_at_the_repo_root(self):
+        # Release notes kept as an HTML page are documentation, whatever the suffix.
+        entries = [prompt("update the release notes"), *edit("docs/releases/notes.html")]
+        self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 0)
+
+    def test_allows_the_docs_folder_of_a_package(self):
+        pkg = self.root / "packages" / "web"
+        pkg.mkdir(parents=True)
+        (pkg / "package.json").write_text("{}")
+        entries = [prompt("docs"), *edit("packages/web/docs/api.html")]
         self.assertEqual(self.run_hook(entries, claude_md="Test command: `npm test`")[0], 0)
 
     def test_allows_turn_without_edits(self):
