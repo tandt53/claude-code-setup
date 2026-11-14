@@ -10,7 +10,12 @@ thing, or that they are any good. That is the job of the `verify-work` skill.
 What counts as a code edit: an Edit/Write/MultiEdit/NotebookEdit of a file
 that is not documentation and lies inside a git work tree (a `.git` in its
 directory or a parent). Files outside every repository, such as a session's
-scratchpad or /tmp, never count: they are throwaway.
+scratchpad or /tmp, never count: they are throwaway. Documentation is a file
+with a documentation suffix (.md, .txt, an image...), or any file under a
+`docs` folder at the root of the repository or of a package (a folder holding
+package.json, pyproject.toml, go.mod...). A `docs` folder deeper in the code,
+such as a web app's app/docs/ route, stays code: a wrong guess here should
+cost a test run, never skip one.
 
 How it finds the test command for an edited file, in order:
   1. A line `Test command: \`<cmd>\`` in CLAUDE.md, AGENTS.md or
@@ -49,6 +54,13 @@ NON_CODE_SUFFIXES = {
     ".svg", ".webp", ".pdf", ".csv", ".lock", ".log",
 }
 NON_CODE_NAMES = {"CLAUDE.md", "AGENTS.md", "LICENSE", "CHANGELOG", ".gitignore"}
+
+# A folder holding one of these is a package root: its docs/ is documentation.
+PACKAGE_MANIFESTS = {
+    "package.json", "deno.json", "pyproject.toml", "setup.py", "go.mod", "Cargo.toml",
+    "pom.xml", "build.gradle", "build.gradle.kts", "Gemfile", "composer.json", "mix.exs",
+    "Package.swift",
+}
 
 COMMON_TEST_COMMANDS = re.compile(
     r"""(?x)
@@ -153,6 +165,19 @@ def is_code_path(path: str) -> bool:
     return p.suffix.lower() not in NON_CODE_SUFFIXES
 
 
+def in_docs_folder(path: Path, root: Path) -> bool:
+    """True when path lies under a `docs` folder that sits at the repository
+    root or at a package root (a folder holding a package manifest)."""
+    parts = path.relative_to(root).parts[:-1]
+    for i, part in enumerate(parts):
+        if part.lower() != "docs":
+            continue
+        parent = root.joinpath(*parts[:i])
+        if parent == root or any((parent / m).is_file() for m in PACKAGE_MANIFESTS):
+            return True
+    return False
+
+
 def normalize(cmd: str) -> str:
     return " ".join(cmd.split())
 
@@ -175,8 +200,11 @@ def decide(event: dict, cwd: Path) -> tuple[bool, str]:
             if not raw or not is_code_path(raw):
                 continue
             path = (cwd / raw).resolve() if not Path(raw).is_absolute() else Path(raw).resolve()
-            if repo_root(path) is None:
+            root = repo_root(path)
+            if root is None:
                 continue  # scratchpad, /tmp, anything outside a repository
+            if in_docs_folder(path, root):
+                continue  # documentation, whatever its suffix
             declared = declared_commands(path.parent)
             if declared == []:
                 continue  # project declares Test command: none

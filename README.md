@@ -183,7 +183,7 @@ touch ~/.claude/lessons.md
   `/agents` lists `reviewer` and `Explore` (yours, on Haiku). `/permissions` lists the three `.env` rules.
 - Run the live tests in `docs/MECHANISMS.md`: one that must block and one
   that must not, for each mechanism.
-- `python3 -m unittest discover -s hooks` runs the hooks' 66 tests.
+- `python3 -m unittest discover -s hooks` runs the hooks' 71 tests.
 - `python3 docs/trace.py` confirms every idea of the design still has a home,
   that no path is written outside `prompts/places.md` and no skill name
   outside its own skill, and that every cross-reference names a section

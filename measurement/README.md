@@ -12,7 +12,7 @@ fixtures. Run the tests with the repo's Test command, or:
 
 | Tool | Phase | What it reads | What it prints |
 |---|---|---|---|
-| `crawl.py` | crawl | a session transcript `.jsonl` | per-session metrics: turns, tool calls, skills loaded, test-runs, commits, self-corrections, `[unverified]`/`[todo]` flags, tokens |
+| `crawl.py` | crawl | a session transcript `.jsonl` | per-session metrics: turns (what a person typed, queued messages included), tool calls, skills loaded, test-runs (the Stop hook's common test commands, or the project's declared `Test command:`), commits, self-corrections, `[unverified]`/`[todo]` flags, tokens |
 | `churn.py` | walk | `git log --numstat` | rework rate (a file touched again within a commit window) and line churn |
 | `trace_rollup.py` | walk | one or more trace-check `status.json` | traceability: examples, proven %, assumed, orphans, level mix |
 | `compare.py` | walk | two `crawl.py --json` outputs | per-metric A vs B mean, range and delta (with-kit vs baseline, or per-skill ablation) |

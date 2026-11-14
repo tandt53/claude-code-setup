@@ -58,6 +58,20 @@ class MeasureSessionTest(unittest.TestCase):
             self.assertEqual(m["test_runs"], 1)
             self.assertEqual(m["unverified_flags"], 1)
 
+    def test_counts_the_projects_declared_test_command(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            repo = d / "repo"
+            (repo / ".git").mkdir(parents=True)
+            (repo / "CLAUDE.md").write_text("Test command: `make verify`\n", encoding="utf-8")
+            tp = d / "proj" / "s.jsonl"
+            tp.parent.mkdir()
+            tp.write_text(json.dumps({"type": "assistant", "message": {"role": "assistant", "content": [
+                {"type": "tool_use", "name": "Bash", "input": {"command": "make verify"}}]}}), encoding="utf-8")
+            path = measure_session.run(
+                {"transcript_path": str(tp), "session_id": "s", "cwd": str(repo)}, out_dir=d / "out")
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["metrics"]["test_runs"], 1)
+
     def test_session_id_falls_back_to_filename(self):
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)

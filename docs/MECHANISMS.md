@@ -69,8 +69,10 @@ Several lines are allowed; any one counts. `Test command: \`none\`` turns the
 gate off for a project with no tests. Without a line, it falls back to
 recognising common test commands, and its message asks Claude to add the line.
 
-**Enforces.** When a turn edited a code file (not `.md`, images and the like)
-inside a git repository, it cannot end until that repository's test command
+**Enforces.** When a turn edited a code file (not `.md`, images and the like,
+nor any file in a `docs` folder at the root of the repository or of a package,
+which is a folder holding `package.json`, `pyproject.toml`, `go.mod` and the
+like) inside a git repository, it cannot end until that repository's test command
 has run after the edit. A turn that edits two repositories needs both test
 runs. Files outside every repository, such as the scratchpad or `/tmp`, never
 count: they are throwaway scripts, and re-running a project's full suite for
@@ -87,11 +89,14 @@ is not a git repository: such a project is not gated at all. Those stay with the
 ```bash
 cd hooks && python3 -m unittest test_require_tests.py -v
 ```
-22 tests. Negative: edit without tests, tests before the last edit, a
+26 tests. Negative: edit without tests, tests before the last edit, a
 different command, no declaration, tests from an earlier turn, a repo edit
-while working from the scratchpad, two repos edited and only one tested.
-Positive: declared command after the edit, AGENTS.md, several declared
-commands, common command without declaration, docs-only edits, no edits,
+while working from the scratchpad, two repos edited and only one tested, a
+`docs` folder inside the code (a web app's `app/docs/` route), a code file
+named `docs.ts`. Positive: declared command after the edit, AGENTS.md,
+several declared commands, common command without declaration, docs-only
+edits, an HTML page in the root `docs` folder, a package's `docs` folder, no
+edits,
 earlier-turn edits, `none`, second stop, escape hatch, malformed input,
 declaration in a parent directory, scratchpad-only edits, a scratchpad edit
 after the tests, the repo's command found when working from the scratchpad.
