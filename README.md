@@ -33,6 +33,7 @@ examples.
 ├─ hooks/after_compact.py           after a compaction: reload skills, keep the language
 ├─ hooks/gap_question.py            on a "là gì / why" message: explain another way, reopen the pick
 ├─ hooks/measure_session.py         Stop hook: session metrics (runs measurement/crawl.py)
+├─ hooks/secret_guard.py            on any message: stop a key or token before it reaches Claude
 ├─ settings.json                    + the hook entries, .env deny rules,
 │                                   attribution off
 └─ lessons.md                       lessons about how Claude works (grows by use)
@@ -121,6 +122,10 @@ flowchart TB
 ## Install
 
 Needs Claude Code, Python 3 and Node.js (tested with Python 3.13 and Node 22).
+gitleaks is optional: when it is on PATH, `secret_guard.py` uses it as a second
+layer; without it the hook still blocks the key forms it knows. The hook keeps a
+secret from Claude, not off the disk: a blocked message may still be saved in
+the session transcript, so rotate a key that was pasted.
 
 ```bash
 git clone https://github.com/tandt53/claude-code-setup.git
@@ -129,7 +134,7 @@ mkdir -p ~/.claude/prompts ~/.claude/skills ~/.claude/agents ~/.claude/hooks ~/.
 cp prompts/*.md ~/.claude/prompts/
 cp -r skills/* ~/.claude/skills/
 cp agents/*.md ~/.claude/agents/
-cp hooks/require_tests.py hooks/after_compact.py hooks/gap_question.py hooks/measure_session.py ~/.claude/hooks/
+cp hooks/require_tests.py hooks/after_compact.py hooks/gap_question.py hooks/measure_session.py hooks/secret_guard.py ~/.claude/hooks/
 cp measurement/crawl.py ~/.claude/measurement/
 cp -r project-kit ~/.claude/
 touch ~/.claude/lessons.md
@@ -177,13 +182,13 @@ touch ~/.claude/lessons.md
 ## Check it works
 
 - `/memory` lists the three prompt files. `/hooks` lists two Stop hooks
-  (tests ran; session metrics), the SessionStart hook and the
-  UserPromptSubmit hook. Every file a hook command names must exist: a
+  (tests ran; session metrics), the SessionStart hook and two
+  UserPromptSubmit hooks (gap questions; secrets). Every file a hook command names must exist: a
   missing script exits 2, which a Stop hook reads as "do not stop".
   `/agents` lists `reviewer` and `Explore` (yours, on Haiku). `/permissions` lists the three `.env` rules.
 - Run the live tests in `docs/MECHANISMS.md`: one that must block and one
   that must not, for each mechanism.
-- `python3 -m unittest discover -s hooks` runs the hooks' 71 tests.
+- `python3 -m unittest discover -s hooks` runs the hooks' 89 tests.
 - `python3 docs/trace.py` confirms every idea of the design still has a home,
   that no path is written outside `prompts/places.md` and no skill name
   outside its own skill, and that every cross-reference names a section
@@ -201,7 +206,7 @@ touch ~/.claude/lessons.md
 | `skills/` | task-spec, verify-work, review-work, retro, project-init, parallel-agents |
 | `agents/reviewer.md` | reviewer subagent |
 | `agents/Explore.md` | search subagent on Haiku, overriding the built-in one |
-| `hooks/` | Stop hooks (tests ran, session metrics), SessionStart hook for compaction, UserPromptSubmit hook for gap questions, and their tests |
+| `hooks/` | Stop hooks (tests ran, session metrics), SessionStart hook for compaction, UserPromptSubmit hooks for gap questions and for secrets in a message, and their tests |
 | `settings.snippet.json` | the hook entries, `.env` deny rules and attribution off, for settings.json |
 | `docs/MECHANISMS.md` | per mechanism: what it enforces, what it does not, tests |
 | `docs/TRACEABILITY.md` | where each idea now lives |
