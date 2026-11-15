@@ -18,7 +18,7 @@ switched off, and then protects nothing.
 | UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
 | UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value) is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; secrets in files Claude reads | 18 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
-| Deny rules for `.env*` | Claude's file tools and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files under the working directory | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder | manual, below |
+| Deny rules for secret files | Claude's file tools, `@` mentions and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files and key files under the working directory, nor the credential files in the home folder (`~/.aws/credentials`, SSH private keys…) | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder; a credential file the list does not name | manual + live, below |
 
 ---
 
@@ -164,15 +164,35 @@ Remove the seeded bugs afterwards (`git checkout` the branch).
 
 **Install.** Merge the `permissions` block of `settings.snippet.json` into
 `~/.claude/settings.json`, keeping any rules you already have. Run
-`/permissions` to confirm the three rules are listed.
+`/permissions` to confirm the rules are listed.
 
-**Enforces.** A bare file name matches at any depth under the current
-directory, so `Read(.env)` and `Read(.env.*)` stop Claude reading `.env`,
-`.env.local`, `packages/api/.env` and the like. The rules cover Claude's own
-file tools and the file commands Claude Code recognises in Bash, such as
-`cat`, `head`, `tail`, `sed` and redirections. `Read(!.env.example)` keeps
-the committed example readable, because it holds variable names, not values
+**Enforces.** The list names only files that are certainly secrets and that
+Claude does not need to read to do its work:
+- **In the project, at any depth** (a bare file name matches at any depth
+  under the current directory): `.env`, `.env.*`, `.envrc`, and key files
+  (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`).
+  `.env.example`, `.env.sample` and `.env.template` stay readable: they hold
+  variable names, not values.
+- **In the home folder:** SSH private keys by name (`~/.ssh/id_rsa`,
+  `id_ed25519` and the other kinds), `~/.aws/credentials`, `~/.netrc`,
+  `~/.git-credentials`, `~/.npmrc`, `~/.pypirc`, `~/.docker/config.json`,
+  `~/.kube/config` and `~/.config/gh/hosts.yml`.
+
+The rules cover Claude's own file tools (Read, Grep, Glob), files the user
+`@`-mentions, and the file commands Claude Code recognises in Bash, such as
+`cat`, `head`, `tail`, `sed` and redirections
 ([permissions docs](https://code.claude.com/docs/en/permissions#read-and-edit)).
+The SSH keys are listed by name rather than as `~/.ssh/id_*`, because a `!`
+carve-out is read relative to the current directory and cannot reopen
+`~/.ssh/id_ed25519.pub` under a `~/` rule.
+
+**Files that only sometimes hold a secret are yours to add**, in the same
+syntax: shell profiles (`Read(~/.zshrc)`, `Read(~/.zprofile)`), where keys
+are often exported, or `Read(**/*.properties)` in a Java project. They are
+not in the default list because Claude reads them for ordinary work
+(`application.properties`, a PATH problem), and a guard that blocks ordinary
+work gets switched off. The Bash hook `env_read_guard.py` (section 4b)
+reads this same list, so one rule covers both.
 
 **Does not enforce.** A command that reads without naming the file
 (`grep -r TOKEN .` from the folder), a Python or Node script that opens the
@@ -197,6 +217,15 @@ with the rules, the Read tool was refused on both secret files and
 printed both secrets, so the refusals came from these rules. Not checked:
 the rules in `~/.claude/settings.json` rather than `--settings`, and the
 interactive session.
+
+**Checked** again on 15 Nov 2026 with the full list, headless, in a scratch
+folder holding a fake `.env`, `.env.sample` and `certs/server.pem`, plus a
+fake file in the home folder under a `~/` rule built the same way as the
+credential rules: the Read tool was refused on `.env`, on `certs/server.pem`
+(a bare `*.pem` matching one folder down) and on the home file; `cat` of all
+three was refused; `.env.sample` was read. None of the fake values appeared
+in the output. The real home files were not used, so that a rule that failed
+could not show a real key.
 
 ---
 

@@ -7,7 +7,30 @@
     "deny": [
       "Read(.env)",
       "Read(.env.*)",
-      "Read(!.env.example)"
+      "Read(!.env.example)",
+      "Read(!.env.sample)",
+      "Read(!.env.template)",
+      "Read(.envrc)",
+      "Read(*.pem)",
+      "Read(*.key)",
+      "Read(*.p12)",
+      "Read(*.pfx)",
+      "Read(*.jks)",
+      "Read(*.keystore)",
+      "Read(~/.ssh/id_rsa)",
+      "Read(~/.ssh/id_dsa)",
+      "Read(~/.ssh/id_ecdsa)",
+      "Read(~/.ssh/id_ecdsa_sk)",
+      "Read(~/.ssh/id_ed25519)",
+      "Read(~/.ssh/id_ed25519_sk)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.netrc)",
+      "Read(~/.git-credentials)",
+      "Read(~/.npmrc)",
+      "Read(~/.pypirc)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.kube/config)",
+      "Read(~/.config/gh/hosts.yml)"
     ]
   },
   "hooks": {
