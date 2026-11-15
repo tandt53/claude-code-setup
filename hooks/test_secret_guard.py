@@ -159,6 +159,13 @@ class SecretGuardTest(unittest.TestCase):
                   f"TOKEN={GITHUB}\nINFO done\n</pasted_content id=\"7\">")
         self.assert_blocked(self.run_hook(prompt), "GitHub token", 4, GITHUB)
 
+    def test_blocks_a_key_deep_in_a_long_paste(self):
+        # Claude Code collapses a long paste to [Pasted text #N] on screen but hands
+        # the hook the full text; a 200-line log with the key on line 151
+        body = "\n".join(f"INFO request {i} ok" if i != 150 else f"DEBUG token={GITHUB}" for i in range(1, 201))
+        prompt = f"why does this fail?\n<pasted_content id=\"3\">\n{body}\n</pasted_content id=\"3\">"
+        self.assert_blocked(self.run_hook(prompt), "GitHub token", 152, GITHUB)
+
     def test_blocks_a_credential_header_with_a_real_looking_value(self):
         secrets = {"curl with a bearer token": BEARER, "raw x-api-key header": API_KEY,
                    "basic auth header": BASIC, "short basic auth header": SHORT_BASIC, "session cookie": SESSION, "auth header in code": AUTH_TOKEN}

@@ -9,6 +9,7 @@ a project folder of its own, so no real settings or files are read.
 
 import json
 import os
+import random
 import subprocess
 import sys
 import tempfile
@@ -192,6 +193,32 @@ class EnvReadGuardTest(unittest.TestCase):
         ]:
             with self.subTest(command):
                 self.assert_allowed(command)
+
+    # ---- properties, over many generated commands ----
+
+    def test_property_ordinary_commands_are_never_denied(self):
+        rnd = random.Random(1115)
+        verbs = ["grep -n", "sort", "head -5", "awk 1", "python3 -c", "wc -l", "diff", "git log --", "jq ."]
+        files = ["src/app.py", "README.md", "package.json", "logs/app.log", "config/dev.yml", "~/notes.txt",
+                 ".env.example", "tests/test_env.py", "docs/environment.md"]
+        joins = [" && ", "; ", " | ", " || "]
+        commands = []
+        for _ in range(150):
+            parts = [f"{rnd.choice(verbs)} {rnd.choice(files)}" for _ in range(rnd.randint(1, 3))]
+            commands.append("".join(p + rnd.choice(joins) for p in parts[:-1]) + parts[-1])
+        self.assertEqual(len(commands), 150)
+        denied = [c for c in commands if self.run_hook(c) is not None]
+        self.assertEqual(denied, [])
+
+    def test_property_a_reading_command_naming_a_protected_file_is_always_denied(self):
+        rnd = random.Random(1116)
+        verbs = ["grep -n KEY", "sort", "head -5", "awk 1", "wc -l", "diff a.txt", "tr a b <", "xxd", "base64"]
+        protected = [".env", "api/.env.local", "~/.zshrc", "$HOME/.aws/credentials", "certs/tls.pem"]
+        prefixes = ["", "npm test && ", "cd src; ", "FOO=1 "]
+        commands = [f"{rnd.choice(prefixes)}{rnd.choice(verbs)} {rnd.choice(protected)}" for _ in range(150)]
+        self.assertEqual(len(commands), 150)
+        let_through = [c for c in commands if self.run_hook(c) is None]
+        self.assertEqual(let_through, [])
 
     # ---- the way out and broken input ----
 

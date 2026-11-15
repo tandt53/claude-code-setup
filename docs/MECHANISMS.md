@@ -16,10 +16,10 @@ switched off, and then protects nothing.
 | Stop hook `require_tests.py` | The project's tests ran after the last code edit in the turn | That they passed, or that they test the right thing | **automated**: 22 tests + mutation check |
 | SessionStart hook `after_compact.py` | After a compaction, Claude is told which loaded skills changed on disk and which language the user writes in | That Claude loads them again, or replies in that language | **automated**: 21 tests + 17 mutants; live run below |
 | UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
-| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value), in its text or in a text file it `@`-mentions, is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; past the first 1 MB of a mentioned file; secrets in images, or in files Claude reads | 26 automated + live, below |
+| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value), in its text or in a text file it `@`-mentions, is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; past the first 1 MB of a mentioned file; secrets in images, or in files Claude reads | 27 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
 | Deny rules for secret files | Claude's file tools, `@` mentions and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files and key files under the working directory, nor the credential files in the home folder (`~/.aws/credentials`, SSH private keys…) | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder; a credential file the list does not name | manual + live, below |
-| PreToolUse hook `env_read_guard.py` | A Bash command that names a file a `Read(...)` deny rule protects (`grep KEY .env`, `python3 -c "open('.env')"`), prints every environment variable, or prints one whose name marks it as a secret, is denied before it runs | A command that reads without naming the file (`grep -r`), a script that opens the file or prints the environment itself; a file named only in prose is let through on purpose | **automated**: 14 tests + 21 mutants; live run below |
+| PreToolUse hook `env_read_guard.py` | A Bash command that names a file a `Read(...)` deny rule protects (`grep KEY .env`, `python3 -c "open('.env')"`), prints every environment variable, or prints one whose name marks it as a secret, is denied before it runs | A command that reads without naming the file (`grep -r`), a script that opens the file or prints the environment itself; a file named only in prose is let through on purpose | **automated**: 16 tests + 21 mutants; live run below |
 
 ---
 
@@ -227,8 +227,10 @@ fake file in the home folder under a `~/` rule built the same way as the
 credential rules: the Read tool was refused on `.env`, on `certs/server.pem`
 (a bare `*.pem` matching one folder down) and on the home file; `cat` of all
 three was refused; `.env.sample` was read. None of the fake values appeared
-in the output. The real home files were not used, so that a rule that failed
-could not show a real key.
+in the output. Without the new rules, the same Read printed both
+`certs/server.pem` and the home file, so the refusals came from them. The
+real home files were not used, so that a rule that failed could not show a
+real key.
 
 ---
 
@@ -291,8 +293,10 @@ it was not checked.
 ```bash
 cd hooks && python3 -m unittest test_env_read_guard.py -v
 ```
-14 tests, each in a home folder and a project folder of its own, so no real
-settings are read: every form above denied, every allowed form let through,
+16 tests, each in a home folder and a project folder of its own, so no real
+settings are read. Two are properties over 150 generated commands each: an
+ordinary chain of commands is never denied, and a reading command naming a
+protected file, behind any prefix, always is. The others: every form above denied, every allowed form let through,
 rules from project and local settings, an absolute rule, carve-outs in both
 directions (a `!` listed first carves nothing; a `!` cannot reopen a file
 under a `~/` rule, run from the home folder as in the docs' own example),
@@ -555,12 +559,13 @@ not scanned.
 ```bash
 cd hooks && python3 -m unittest test_secret_guard.py -v
 ```
-26 tests. Every key is fake and built at run time, so the test file holds
+27 tests. Every key is fake and built at run time, so the test file holds
 nothing a scanner takes for a key.
 - **Blocks:** each of the six key kinds; a key inside a pasted block (named by
-  its line); five header forms (a curl bearer token, a raw `x-api-key` line,
-  a long and a short `Basic` value, a session cookie, a header in code); the
-  masked value shown; every secret of a message listed.
+  its line), also on line 152 of a 200-line paste; five header forms (a curl
+  bearer token, a raw `x-api-key` line, a long and a short `Basic` value, a
+  session cookie, a header in code); the masked value shown; every secret of a
+  message listed.
 - **Mentioned files:** a key on line 120 of `@logs/app.log` blocks, naming the
   file and the line; a mention at the end of a sentence (`@logs/app.log.`), from
   `~/` and by absolute path; every mentioned file scanned, one named twice
