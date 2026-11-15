@@ -19,15 +19,25 @@ machine. A `!` rule carves a path out of the relative rules listed before it
 in the same file, as Claude Code does; it cannot reopen a `~/` or `//` rule.
 
 What it denies:
-  - a command that names a protected file, except where the command only
-    loads, checks, creates or deletes it: `source`, `.`, `ls`, `test`, `[`,
-    `stat`, `touch`, `rm`, `chmod`, `chown`, the target of `cp`/`mv` or of a
-    `>` redirection, and the value of `--env-file`;
+  - a command that names a protected file (a `cd` earlier in the command
+    counts, and so does curl's `@file`), except where the command only uses,
+    loads, checks, moves or deletes it without printing it: `source`, `.`,
+    `ls`, `test`, `[`, `stat`, `touch`, `rm`, `chmod`, `chown`, `ssh`, `scp`,
+    `sftp`, `ssh-add`, `ssh-keygen`, git's `add`, `rm`, `mv`, `checkout`,
+    `restore`, `reset`, `commit`, `status`, `ls-files`, `check-ignore`; the
+    target of a `>` redirection; `cp`/`mv` to a name that is protected too;
+    the value of `--env-file`, `--kubeconfig`, `--cacert`, `--capath`,
+    `--cert`, `--key`, `--netrc-file`; and the program being run
+    (`.env/bin/python`, a virtualenv named `.env`);
   - `printenv`, `env`, `export`, `declare`/`typeset` or `set` with nothing
     to do but list the variables: they print every one, keys included;
   - `echo`, `printf` or `printenv` of a variable whose name marks it as a
-    secret (KEY, TOKEN, SECRET, PASSWORD, PASSWD, PASS, CREDENTIAL, CREDS,
-    AUTH, PRIVATE as a part of the name).
+    secret: a part of the name, between underscores, is KEY, TOKEN, SECRET,
+    PASSWORD, PASSWD, PASS, CREDENTIAL, CREDS, AUTH or PRIVATE, or one of
+    APIKEY, ACCESSKEY, SECRETKEY, PRIVATEKEY, ACCESSTOKEN, AUTHTOKEN; unless
+    the name ends in a part that names something else (ID, FILE, PATH, URL,
+    PORT, SOCK, HOST, USER, NAME, DIR, TYPE, REGION, ENDPOINT).
+The code of `bash -c`/`sh -c`/`zsh -c` is checked as a command of its own.
 
 What it does not deny: a command that reads without naming the file
 (`grep -r TOKEN .`), a script that opens the file itself, a secret variable
@@ -50,15 +60,22 @@ import sys
 from pathlib import Path
 
 NAME = "env_read_guard"
-NO_READ = {"source", ".", "ls", "test", "[", "[[", "stat", "touch", "rm", "chmod", "chown"}
+NO_READ = {"source", ".", "ls", "test", "[", "[[", "stat", "touch", "rm", "chmod", "chown",
+           "ssh", "scp", "sftp", "ssh-add", "ssh-keygen"}
+GIT_NO_READ = {"add", "rm", "mv", "checkout", "restore", "reset", "commit", "status", "ls-files", "check-ignore"}
 COPY = {"cp", "mv"}
+USE_FLAGS = {"--env-file", "--kubeconfig", "--cacert", "--capath", "--cert", "--key", "--netrc-file"}
+SHELLS = {"bash", "sh", "zsh", "dash"}
 PRINT = {"echo", "printf", "printenv"}
 LISTERS = {"printenv", "export", "declare", "typeset", "set"}
-SECRET_PART = re.compile(r"(?:KEYS?|TOKENS?|SECRETS?|PASSWORDS?|PASSWD|PASS|CREDENTIALS?|CREDS|AUTH|PRIVATE)$")
-VARIABLE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)")
+SECRET_PART = re.compile(r"KEYS?|TOKENS?|SECRETS?|PASSWORDS?|PASSWD|PASS|CREDENTIALS?|CREDS|AUTH|PRIVATE"
+                         r"|APIKEY|ACCESSKEY|SECRETKEY|PRIVATEKEY|ACCESSTOKEN|AUTHTOKEN")
+NOT_SECRET_LAST = {"ID", "FILE", "PATH", "URL", "PORT", "SOCK", "HOST", "USER", "NAME", "DIR", "TYPE",
+                   "REGION", "ENDPOINT"}
+VARIABLE = re.compile(r"\$\{?!?([A-Za-z_][A-Za-z0-9_]*)")
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 PUNCT = set("();<>|&")
-SPLIT = re.compile(r"[\s=:,'\"`(){}\[\];|&<>]+")
+SPLIT = re.compile(r"[\s=:,'\"`(){}\[\];|&<>@]+")
 INLINE_CODE = {"-c", "-e", "--eval"}  # python -c, node -e, bash -c: the next word is code, read it
 SUBSTITUTION = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
 HEREDOC = re.compile(r"<<-?[ \t]*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1([^\n]*)\n(.*?\n)?[ \t]*\2[ \t]*(?=\n|\)|$)", re.S)
@@ -222,14 +239,26 @@ def lists_every_variable(words: list[str]) -> bool:
     return not args
 
 
-def read_candidates(words: list[str]) -> list[str]:
-    """Words that may name a file the command reads. A word with a space in it
-    is prose (a commit message, a title), unless it follows -c or -e."""
+def git_subcommand(words: list[str]) -> str | None:
+    i = 1
+    while i < len(words) and words[i].startswith("-"):
+        i += 2 if words[i] in ("-C", "-c", "--git-dir", "--work-tree", "--namespace") else 1
+    return words[i] if i < len(words) else None
+
+
+def read_candidates(words: list[str], protected) -> list[str]:
+    """Words that may name a file the command reads. The program itself is
+    not one: running .env/bin/python reads no secret. A word with a space in
+    it is prose (a commit message, a title), unless it follows -c or -e."""
     if not words or words[0] in NO_READ or words[0] in ("echo", "printf"):
+        return []
+    if words[0] == "git" and git_subcommand(words) in GIT_NO_READ:
         return []
     out, skip_next, prev = [], False, words[0]
     plain = [w for w in words[1:] if not w.startswith("-")]
     target = plain[-1] if words[0] in COPY and len(plain) >= 2 else None
+    if target is not None and protected(target):
+        return []  # from one protected name to another: nothing becomes readable
     for w in words[1:]:
         before, prev = prev, w
         if skip_next:
@@ -238,35 +267,35 @@ def read_candidates(words: list[str]) -> list[str]:
         if set(w) <= PUNCT:  # a redirection: what follows > is written, what follows < is read
             skip_next = ">" in w or w.startswith("<<")
             continue
-        if w == "--env-file":
+        if w in USE_FLAGS:
             skip_next = True
             continue
-        if w.startswith("--env-file=") or w is target:
+        if w.split("=", 1)[0] in USE_FLAGS or w is target:
             continue
         if re.search(r"\s", w) and before not in INLINE_CODE:
             continue
         out.append(w)
-    return [words[0]] + out
+    return out
 
 
-def without_text_heredocs(command: str) -> str:
-    """Drop the body of a heredoc that is text (a file being written, a commit
-    message); keep it when a code runner reads it (python3 - <<EOF)."""
+def split_heredocs(command: str) -> tuple[str, list[str]]:
+    """The command without its heredoc bodies, and the bodies a code runner
+    reads (python3 - <<EOF), which are checked like the code of `-c`. A body
+    that is text (a file being written, a commit message) is dropped."""
+    code = []
+
     def repl(m: re.Match) -> str:
         line = command[command.rfind("\n", 0, m.start()) + 1:m.start()]
-        return m.group(0) if CODE_RUNNERS.search(line) else f"<<{m.group(2)}{m.group(3)}\n"
-    return HEREDOC.sub(repl, command)
+        if CODE_RUNNERS.search(line):
+            code.append(m.group(4) or "")
+        return f"<<{m.group(2)}{m.group(3)}\n"
+    return HEREDOC.sub(repl, command), code
 
 
 def substitutions(command: str) -> list[str]:
-    """The commands inside $( ) and backticks, nested ones included."""
-    found, queue = [], [command]
-    while queue:
-        for m in SUBSTITUTION.finditer(queue.pop()):
-            inner = m.group(1) if m.group(1) is not None else m.group(2)
-            found.append(inner)
-            queue.append(inner)
-    return found
+    """The commands inside $( ) and backticks; the caller checks each in turn,
+    and so finds the nested ones."""
+    return [m.group(1) if m.group(1) is not None else m.group(2) for m in SUBSTITUTION.finditer(command)]
 
 
 def expand(word: str, home: str, cwd: str) -> list[str]:
@@ -282,7 +311,13 @@ def expand(word: str, home: str, cwd: str) -> list[str]:
 
 
 def file_reason(words: list[str], groups, home: str, cwd: str) -> str | None:
-    for word in read_candidates(words):
+    def protected(word: str) -> bool:
+        return any(protecting_rule(p, groups) for p in expand(word, home, cwd))
+    return named_file_reason(read_candidates(words, protected), groups, home, cwd)
+
+
+def named_file_reason(candidates: list[str], groups, home: str, cwd: str) -> str | None:
+    for word in candidates:
         for piece in [word] + [p for p in SPLIT.split(word) if p and p != word]:
             for path in expand(piece, home, cwd):
                 rule = protecting_rule(path, groups)
@@ -307,10 +342,17 @@ def env_reason(words: list[str]) -> str | None:
         if words[0] == "printenv":
             names += [w for w in words[1:] if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", w)]
         for n in names:
-            if any(SECRET_PART.search(part) for part in n.upper().split("_") if part):
+            if secret_name(n):
                 return (f"{NAME} stopped this command: it prints {n}, whose name marks it as a secret. "
                         "Use the variable inside the command that needs it instead of printing it.")
     return None
+
+
+def secret_name(name: str) -> bool:
+    parts = [p for p in name.upper().split("_") if p]
+    if not parts or parts[-1] in NOT_SECRET_LAST:  # API_KEY_ID, SSH_AUTH_SOCK: about the secret, not it
+        return False
+    return any(SECRET_PART.fullmatch(p) for p in parts)
 
 
 def decide(event: object) -> dict | None:
@@ -330,12 +372,24 @@ def decide(event: object) -> dict | None:
     cwd = event.get("cwd") if isinstance(event.get("cwd"), str) else os.getcwd()
     project = os.environ.get("CLAUDE_PROJECT_DIR") or cwd
     groups = load_rules(home, project, cwd)
-    command = without_text_heredocs(command)
-    for text in [command] + substitutions(command):
+    queue = [command]
+    while queue:  # the command, then each $( ), backtick and `sh -c` code inside it
+        text, code = split_heredocs(queue.pop(0))
+        queue += substitutions(text)
+        reason = named_file_reason(code, groups, home, cwd)
+        if reason:
+            return deny(reason)
+        here = cwd
         for seg in segments(text):
             words, bare_env = strip_prefixes(seg)
+            if words and words[0] in ("cd", "pushd"):  # later commands read from there
+                to = words[1] if len(words) > 1 else "~"
+                here = here if to == "-" else expand(to, home, here)[0]
+                continue
+            if words and words[0] in SHELLS and "-c" in words[:-1]:
+                queue.append(words[words.index("-c") + 1])
             reason = (every_reason("env") if bare_env
-                      else env_reason(words) or file_reason(words, groups, home, cwd))
+                      else env_reason(words) or file_reason(words, groups, home, here))
             if reason:
                 return deny(reason)
     return None
