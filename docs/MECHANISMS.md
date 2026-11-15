@@ -19,6 +19,7 @@ switched off, and then protects nothing.
 | UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value) is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; secrets in files Claude reads | 18 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
 | Deny rules for secret files | Claude's file tools, `@` mentions and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files and key files under the working directory, nor the credential files in the home folder (`~/.aws/credentials`, SSH private keys…) | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder; a credential file the list does not name | manual + live, below |
+| PreToolUse hook `env_read_guard.py` | A Bash command that names a file a `Read(...)` deny rule protects (`grep KEY .env`, `python3 -c "open('.env')"`), prints every environment variable, or prints one whose name marks it as a secret, is denied before it runs | A command that reads without naming the file (`grep -r`), a script that opens the file or prints the environment itself; a file named only in prose is let through on purpose | **automated**: 14 tests + 21 mutants; live run below |
 
 ---
 
@@ -194,10 +195,12 @@ not in the default list because Claude reads them for ordinary work
 work gets switched off. The Bash hook `env_read_guard.py` (section 4b)
 reads this same list, so one rule covers both.
 
-**Does not enforce.** A command that reads without naming the file
-(`grep -r TOKEN .` from the folder), a Python or Node script that opens the
-file itself, and `.env` files above the working directory. Blocking those
-takes the OS sandbox (`/sandbox`), not a permission rule.
+**Does not enforce.** A command that hands the file to a program Claude Code
+does not recognise (`grep KEY .env`, `python3 -c "open('.env')"`): the Bash
+hook in section 4b catches those. A command that reads without naming the
+file (`grep -r TOKEN .` from the folder), a Python or Node script that opens
+the file itself, and `.env` files above the working directory: blocking those
+takes the OS sandbox (section 4b), not a permission rule.
 
 **Negative test** (must block):
 1. In a scratch folder: `echo 'API_KEY=secret123' > .env`.
@@ -226,6 +229,88 @@ credential rules: the Read tool was refused on `.env`, on `certs/server.pem`
 three was refused; `.env.sample` was read. None of the fake values appeared
 in the output. The real home files were not used, so that a rule that failed
 could not show a real key.
+
+---
+
+## 4b. PreToolUse hook → a Bash command does not print a protected file or a key
+
+**Install.** Copy `hooks/env_read_guard.py` to `~/.claude/hooks/` and merge
+the `PreToolUse` entry of `settings.snippet.json` into
+`~/.claude/settings.json`.
+
+**Enforces.** Before a Bash command runs, the hook denies it when it:
+- **names a file a `Read(...)` deny rule protects**, in a way Claude Code's
+  own check misses: `grep API_KEY .env`, `awk -F= '{print $2}' ~/.zshrc`,
+  `python3 -c "print(open('.env').read())"`, `bash -c "…"`, `$(cat .env)`
+  inside another command, a glob such as `cat .env*`, or a heredoc of code
+  fed to an interpreter. The rules are read from `~/.claude/settings.json`
+  and the project's `.claude/settings.json` and `.claude/settings.local.json`,
+  with Claude Code's anchors and carve-outs, so the list is kept in one place
+  (section 4). A bare name (`.env`, `*.pem`) counts anywhere on the machine;
+- **prints every environment variable**: `printenv`, `env`, `export`,
+  `export -p`, `declare -x` or `set`, alone or piped. Keys exported by a shell
+  profile live there;
+- **prints a variable whose name marks it as a secret**: `echo $GITHUB_TOKEN`,
+  `printenv AWS_SECRET_ACCESS_KEY`, where a part of the name is KEY, TOKEN,
+  SECRET, PASSWORD, PASSWD, PASS, CREDENTIAL, CREDS, AUTH or PRIVATE.
+
+Claude sees why, with the rule and the file it came from:
+"env_read_guard stopped this command: it names .env, which the rule
+Read(.env) in ~/.claude/settings.json protects, so the file's contents would
+reach the model. Work from an example file (such as .env.example) or ask the
+user for the names you need."
+
+It lets through a command that only loads, checks, creates or deletes a
+protected file (`source .env`, `ls -la .env`, `test -f .env`,
+`cp .env.example .env`, `>> .env`, `--env-file .env`, `rm`), a secret
+variable used rather than printed (`curl -H "api-key: $KEY"`), and a file
+named only in prose: a commit message, a PR title, an echoed sentence, a
+heredoc of text. A guard that blocked those would block ordinary work and be
+switched off.
+
+**Does not enforce.**
+- A command that reads without naming the file (`grep -r TOKEN .`), and a
+  script file that opens it itself (`python3 load.py`).
+- A script that prints the environment (`node -e "console.log(process.env)"`),
+  and a secret kept in a variable with an ordinary name.
+- A path with a space in it, which reads as prose.
+
+The OS sandbox covers the first: with `sandbox.enabled`, Claude Code merges
+the `Read(...)` deny rules into it and enforces them for every Bash command
+and its child processes, scripts included
+([sandboxing docs](https://code.claude.com/docs/en/sandboxing)). It is off
+by default, and turning it on also limits writes and network for every Bash
+command, so try it in one project before turning it on everywhere. Nothing
+here hides the environment from a script.
+
+`CLAUDE_SKIP_ENV_READ_GUARD=1` in the environment turns the hook off. Input it
+cannot read, or an error of its own, lets the command run with a warning that
+it was not checked.
+
+**Automated tests.**
+```bash
+cd hooks && python3 -m unittest test_env_read_guard.py -v
+```
+14 tests, each in a home folder and a project folder of its own, so no real
+settings are read: every form above denied, every allowed form let through,
+rules from project and local settings, an absolute rule, carve-outs in both
+directions (a `!` listed first carves nothing; a `!` cannot reopen a file
+under a `~/` rule, run from the home folder as in the docs' own example),
+broken settings, broken input, the switch.
+
+Checked the checks: 21 mutants, each removing one rule from a copy of the
+hook. The first run let one survive: a `!` rule reopening a file under a
+`~/` rule, because the test's carve-out could not match from the project
+folder; the case now runs from the home folder. 21 of 21 make a test fail.
+
+**Checked** headless on 15 Nov 2026, in a scratch folder holding a fake
+`.env` and `.env.example`, the hook in the project's settings, and the
+environment cleared down to a fake `FAKE_DEMO_TOKEN` so that a failure could
+not print a real key: `grep API_KEY .env`, the `python3 -c` read, `printenv`
+and `echo $FAKE_DEMO_TOKEN` were denied with the reasons above; `echo $HOME`
+and `cat .env.example` ran. None of the fake values appeared in the output.
+
+**Not yet checked:** the interactive session.
 
 ---
 
