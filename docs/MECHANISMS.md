@@ -16,7 +16,7 @@ switched off, and then protects nothing.
 | Stop hook `require_tests.py` | The project's tests ran after the last code edit in the turn | That they passed, or that they test the right thing | **automated**: 22 tests + mutation check |
 | SessionStart hook `after_compact.py` | After a compaction, Claude is told which loaded skills changed on disk and which language the user writes in | That Claude loads them again, or replies in that language | **automated**: 21 tests + 17 mutants; live run below |
 | UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
-| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value) is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; secrets in files Claude reads | 18 automated + live, below |
+| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value), in its text or in a text file it `@`-mentions, is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; past the first 1 MB of a mentioned file; secrets in images, or in files Claude reads | 26 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
 | Deny rules for secret files | Claude's file tools, `@` mentions and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files and key files under the working directory, nor the credential files in the home folder (`~/.aws/credentials`, SSH private keys…) | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder; a credential file the list does not name | manual + live, below |
 | PreToolUse hook `env_read_guard.py` | A Bash command that names a file a `Read(...)` deny rule protects (`grep KEY .env`, `python3 -c "open('.env')"`), prints every environment variable, or prints one whose name marks it as a secret, is denied before it runs | A command that reads without naming the file (`grep -r`), a script that opens the file or prints the environment itself; a file named only in prose is let through on purpose | **automated**: 14 tests + 21 mutants; live run below |
@@ -508,7 +508,13 @@ PATH. gitleaks is optional: when it is on PATH (`brew install gitleaks`), it
 adds a second layer.
 
 **Enforces.** Every message, pasted blocks included, is read before it is
-sent. These forms block it:
+sent. A long paste that Claude Code shows as `[Pasted text #N]` reaches the
+hook in full ([hooks docs](https://code.claude.com/docs/en/hooks)). A file the
+message `@`-mentions (`@logs/app.log`) reaches the hook only as its name, and
+Claude Code attaches the content after the hook has run, so the hook opens
+each mentioned text file itself (from the working folder, `~/` or an absolute
+path) and scans it the same way: the first 1 MB, with a note when there was
+more; binary files and folders are skipped. These forms block it:
 - GitHub tokens, Anthropic keys, AWS access key ids, private key blocks and
   JWTs;
 - a credential header (`Authorization`, `X-API-Key`, `X-Auth-Token` and the
@@ -518,7 +524,9 @@ sent. These forms block it:
 - a `Basic` header that decodes to `user:password`.
 
 The block message names each one by line and kind with the middle of the
-value masked (`ghp_Ab…Yz12`), and leaves the message text out of itself
+value masked (`ghp_Ab…Yz12`), and by file for a mentioned file
+(`file logs/app.log, line 42: GitHub token ghp_x8…TpdL`), and leaves the
+message text out of itself
 (`suppressOriginalPrompt`). With gitleaks installed, the message also goes to
 `gitleaks stdin` for at most 2 seconds: a rule for one of the forms above
 blocks, and any other rule (such as `generic-api-key`) only warns. When
@@ -538,19 +546,29 @@ not scanned.
   off the machine: rotate a key that was pasted.
 - **Secrets of other forms.** A password in prose, or a provider key with no
   fixed prefix, is caught only by gitleaks, and then only as a warning.
-- **Secrets in images or attached files**, or in files and command output
-  Claude reads (section 4 and review cover those).
+- **Secrets in images**, past the first 1 MB of a mentioned file, in a file
+  attached without its name in the message text (if a client attaches files
+  that way), or in files and command output Claude reads (sections 4 and 4b,
+  and review, cover those).
 
 **Automated tests.**
 ```bash
 cd hooks && python3 -m unittest test_secret_guard.py -v
 ```
-18 tests. Every key is fake and built at run time, so the test file holds
+26 tests. Every key is fake and built at run time, so the test file holds
 nothing a scanner takes for a key.
 - **Blocks:** each of the six key kinds; a key inside a pasted block (named by
   its line); five header forms (a curl bearer token, a raw `x-api-key` line,
   a long and a short `Basic` value, a session cookie, a header in code); the
   masked value shown; every secret of a message listed.
+- **Mentioned files:** a key on line 120 of `@logs/app.log` blocks, naming the
+  file and the line; a mention at the end of a sentence (`@logs/app.log.`), from
+  `~/` and by absolute path; every mentioned file scanned, one named twice
+  listed once; a clean file, a name that is no file, a folder, a binary file,
+  an email address and `@property` pass silently; a key past the first 1 MB
+  is not seen and the note says so, a key in the first line blocks;
+  `[secret-ok]` sends the file too; a gitleaks finding in a file names the
+  file and its own line.
 - **Passes silently:** 17 ordinary messages, among them a sentence about a
   token's format, AWS's sample key, a PEM header line with no key,
   placeholders with and without digits, a dummy value, a harmless cookie, a
@@ -578,6 +596,16 @@ blocked, line numbers off by one). The first run let one survive: the dummy
 value `xxxx…` was already a placeholder, so the distinct-character rule was
 never exercised; a case now covers it. 18 of 18 make a test fail.
 
+The mentioned-file part, 15 Nov 2026: 12 mutants (no trailing punctuation
+stripped, no `~/`, binary files scanned, no note past 1 MB, only the first
+mention, files not scanned, the file not named, gitleaks lines not mapped
+back to the file, an `@` inside a word counted, one file listed twice, and two
+that lift the 1 MB limit). The first run let four survive; two cases (an email
+address beside a file of that name, a file mentioned twice) now kill two of
+them. The two that remain lift the limit in one place only: it is applied
+when the file is read and again when it is scanned, so either one alone keeps
+the result. 10 of 12 make a test fail.
+
 **Checked** with Claude Code 2.1.261, headless (`claude -p --settings`
 holding only this hook):
 - **A fake GitHub token:** blocked with 0 model turns and no cost. The result
@@ -587,6 +615,10 @@ holding only this hook):
   holds the warning as a `hook_system_message` attachment.
 - **`API_SECRET=<40 random characters>`:** gitleaks' `generic-api-key` sent
   the message with a `hook_system_message` warning naming line 1.
+- **`@logs/app.log why do requests fail?`**, with a fake GitHub token on line
+  42 of a 79-line log (15 Nov 2026): blocked with 0 model turns and no cost,
+  showing `file logs/app.log, line 42: GitHub token ghp_x8…TpdL`; the full
+  token was nowhere in the output.
 
 **Checked** in an interactive session (14 Nov 2026), with a fake token typed
 into the prompt:
@@ -602,7 +634,9 @@ into the prompt:
 
 **Not yet checked:** how a warning (`[secret-ok]`, a generic gitleaks
 finding, "could not scan") looks in the interactive session, and whether the
-interactive prompt history keeps a blocked message.
+interactive prompt history keeps a blocked message. In the VS Code extension:
+whether a long paste reaches the hook in full, and whether the attach button
+writes the file's `@` name into the message, so that the hook can see it.
 
 ---
 

@@ -5,7 +5,13 @@ it reaches Claude.
 
 What it reads: the whole message, pasted blocks included. Pasting a log, a
 curl command or a config file is how a key usually slips in, so unlike
-gap_question.py this hook does not skip pasted text.
+gap_question.py this hook does not skip pasted text. Claude Code expands a
+long paste collapsed to "[Pasted text #N]" before this hook runs. A file the
+message @-mentions (`@logs/app.log`) reaches the hook only as its name, and
+Claude Code attaches its content afterwards, so the hook reads each such text
+file itself, from the working folder, `~/` or an absolute path: the first
+1 MB of it, saying so when there was more. Binary files and folders are left
+alone.
 
 Two layers:
   1. Patterns in this file, always on, only for forms that are certainly
@@ -82,6 +88,36 @@ GITLEAKS_CERTAIN = {
 
 IDE_PREFIX = re.compile(r"\A\s*(?:<(ide_[a-z_]+)>.*?</\1>\s*)+", re.DOTALL)
 ESCAPE = "[secret-ok]"
+
+# A file the message @-mentions: "@" at the start or after a space, then a path.
+MENTION = re.compile(r"(?:^|(?<=\s))@(\S+)")
+MAX_FILE_BYTES = 1_000_000
+
+
+def mentioned_files(text: str, cwd: str | None) -> list[tuple[str, str, bool]]:
+    """(name as written, text, cut short) for each text file the message @-mentions."""
+    base = cwd if cwd and os.path.isdir(cwd) else os.getcwd()
+    out, seen = [], set()
+    for m in MENTION.finditer(text):
+        for name in dict.fromkeys([m.group(1), m.group(1).rstrip(".,;:!?)]}'\"")]):
+            path = os.path.join(base, os.path.expanduser(name))
+            if name and os.path.isfile(path):
+                break
+        else:
+            continue
+        real = os.path.realpath(path)
+        if real in seen:
+            continue
+        seen.add(real)
+        try:
+            with open(real, "rb") as f:
+                data = f.read(MAX_FILE_BYTES + 1)
+        except OSError:
+            continue
+        if b"\x00" in data[:8192]:
+            continue  # binary: an image, an archive
+        out.append((name, data[:MAX_FILE_BYTES].decode("utf-8", "replace"), len(data) > MAX_FILE_BYTES))
+    return out
 
 
 def mask(value: str) -> str:
@@ -195,22 +231,34 @@ def decide(event: object) -> dict | None:
         return {"systemMessage": f"secret_guard: {ESCAPE} at the start, so this message was sent "
                                  "without a secret check."}
 
-    certain = [f"line {line}: {kind} {shown}" for line, kind, shown in pattern_findings(text)]
+    files = mentioned_files(text, event.get("cwd"))
+    # each part is scanned on its own; gitleaks gets them joined, in one call
+    parts = [("", text)] + [(f"file {name}, ", content) for name, content, _ in files]
+    certain, starts, first = [], [], 1
+    for label, content in parts:
+        certain += [f"{label}line {line}: {kind} {shown}" for line, kind, shown in pattern_findings(content)]
+        starts.append(first)
+        first += content.count("\n") + 1
     warnings = []
-    for line, rule in gitleaks_findings(text, event.get("cwd")) or []:
-        where = f"line {line}" if line else "somewhere"
+    joined = "\n".join(content for _, content in parts)
+    for line, rule in gitleaks_findings(joined, event.get("cwd")) or []:
+        i = max((k for k, s in enumerate(starts) if s <= line), default=0)
+        where = f"{parts[i][0]}line {line - starts[i] + 1}" if line else "somewhere"
         if rule in GITLEAKS_CERTAIN:
-            if not any(x.startswith(f"line {line}:") for x in certain):
+            if not any(x.startswith(f"{where}:") for x in certain):
                 certain.append(f"{where}: gitleaks rule {rule}")
         else:
             warnings.append(f"{where} ({rule})")
     if certain:
         return block(certain)
+    notes = []
     if warnings:
-        return {"systemMessage": "secret_guard: gitleaks flags " + ", ".join(warnings)
-                                 + " as a possible secret. The message was sent; check it, and"
-                                 " rotate the value if it is real."}
-    return None
+        notes.append("secret_guard: gitleaks flags " + ", ".join(warnings) + " as a possible secret."
+                     " The message was sent; check it, and rotate the value if it is real.")
+    for name, _, cut in files:
+        if cut:
+            notes.append(f"secret_guard: only the first 1 MB of {name} was scanned.")
+    return {"systemMessage": " ".join(notes)} if notes else None
 
 
 def main() -> int:

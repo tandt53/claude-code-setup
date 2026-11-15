@@ -98,7 +98,7 @@ def fake_gitleaks(directory, body):
     exe = Path(directory) / "gitleaks"
     exe.write_text(f"#!{sys.executable}\nimport json, os, sys, time\n"
                    f"if os.environ.get('FAKE_GITLEAKS_WARMUP'): sys.exit(0)\n"
-                   f"sys.stdin.read()\n{body}\n")
+                   f"data = sys.stdin.read()\n{body}\n")
     exe.chmod(0o755)
     subprocess.run([str(exe)], env={**os.environ, "FAKE_GITLEAKS_WARMUP": "1"}, timeout=30, check=True)
     return exe
@@ -241,6 +241,78 @@ class SecretGuardTest(unittest.TestCase):
         self.assertIsNone(self.run_hook("please add pagination to the orders list", path=path))
         self.assert_blocked(self.run_hook(f"x\n{GITHUB}", path=path), "GitHub token", 2, GITHUB)
         self.assertLess(self.elapsed, 2)
+
+    # ---- files the message @-mentions: Claude Code attaches them after this hook ----
+
+    def write(self, rel, content):
+        path = Path(self.tmp.name) / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(content, bytes):
+            path.write_bytes(content)
+        else:
+            path.write_text(content)
+        return path
+
+    def log_with(self, secret, at_line, lines=150):
+        return "\n".join(secret if i == at_line else f"INFO request {i} ok" for i in range(1, lines + 1)) + "\n"
+
+    def test_a_key_in_a_mentioned_file_blocks_and_names_the_file_and_line(self):
+        self.write("logs/app.log", self.log_with(f"Authorization: Bearer {GITHUB}", 120))
+        out = self.run_hook("@logs/app.log can you see why it fails?")
+        self.assert_blocked(out, "GitHub token", 120, GITHUB)
+        self.assertIn("file logs/app.log, line 120", out["reason"])
+
+    def test_a_mention_at_the_end_of_a_sentence_still_counts(self):
+        self.write("logs/app.log", self.log_with(GITHUB, 3, lines=5))
+        out = self.run_hook("the error is in @logs/app.log.")
+        self.assert_blocked(out, "GitHub token", 3, GITHUB)
+
+    def test_mentions_from_the_home_folder_and_by_absolute_path(self):
+        home = Path(self.tmp.name) / "home"
+        self.write("home/notes/run.log", self.log_with(AWS, 2, lines=4))
+        out = self.run_hook("look at @~/notes/run.log", env={"HOME": str(home)})
+        self.assert_blocked(out, "AWS access key id", 2, AWS)
+        out = self.run_hook(f"look at @{home}/notes/run.log")
+        self.assert_blocked(out, "AWS access key id", 2, AWS)
+
+    def test_every_mentioned_file_is_scanned(self):
+        self.write("a.log", self.log_with("nothing here", 1, lines=3))
+        self.write("b.log", self.log_with(JWT, 2, lines=3))
+        out = self.run_hook("compare @a.log with @b.log")
+        self.assert_blocked(out, "JWT", 2, JWT)
+        self.assertIn("file b.log", out["reason"])
+        self.assertNotIn("a.log", out["reason"])
+        out = self.run_hook("@b.log and again @./b.log")   # one file, named twice: listed once
+        self.assertEqual(out["reason"].count("JWT"), 1, out["reason"])
+
+    def test_a_clean_file_and_mentions_that_are_not_text_files_go_through(self):
+        self.write("logs/app.log", self.log_with("INFO all good", 1, lines=50))
+        self.write("src/app.py", "print('hi')\n")
+        self.write("shot.png", b"\x89PNG\r\n\x1a\n\x00\x00" + GITHUB.encode())
+        self.write("example.com", GITHUB + "\n")   # an email address is not a mention
+        for prompt in ["@logs/app.log why so slow?", "ping @tandt about it", "read @src/ first",
+                       "see @shot.png", "mail me at me@example.com", "@property is a decorator"]:
+            with self.subTest(prompt):
+                self.assertIsNone(self.run_hook(prompt))
+
+    def test_only_the_first_megabyte_of_a_big_file_is_scanned_and_that_is_said(self):
+        filler = "INFO " + "x" * 95 + "\n"
+        self.write("logs/big.log", filler * 11000 + GITHUB + "\n")   # about 1.1 MB, the key past 1 MB
+        out = self.run_hook("@logs/big.log any errors?")
+        self.assert_warned(out, "only the first 1 MB", "logs/big.log")
+        self.write("logs/big.log", GITHUB + "\n" + filler * 11000)   # the key in the first line
+        self.assert_blocked(self.run_hook("@logs/big.log any errors?"), "GitHub token", 1, GITHUB)
+
+    def test_secret_ok_sends_the_mentioned_file_too(self):
+        self.write("logs/app.log", self.log_with(GITHUB, 3, lines=5))
+        self.assert_warned(self.run_hook("[secret-ok] @logs/app.log is a test fixture"), "[secret-ok]")
+
+    def test_gitleaks_findings_in_a_mentioned_file_name_the_file(self):
+        self.write("conf/app.ini", "[db]\nhost = localhost\ndb_secret = 'hunter2hunter2'\n")
+        fake_gitleaks(self.bin, "n = next(i + 1 for i, l in enumerate(data.split('\\n')) if 'db_secret' in l)\n"
+                                'print(json.dumps([{"RuleID": "generic-api-key", "StartLine": n}])); sys.exit(1)')
+        self.assert_warned(self.run_hook("what is wrong with\n@conf/app.ini"),
+                           "generic-api-key", "conf/app.ini", "line 3")
 
     # ---- broken input: let it through, say it was not scanned ----
 
