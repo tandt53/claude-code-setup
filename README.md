@@ -34,6 +34,7 @@ examples.
 ├─ hooks/gap_question.py            on a "là gì / why" message: explain another way, reopen the pick
 ├─ hooks/measure_session.py         Stop hook: session metrics (runs measurement/crawl.py)
 ├─ hooks/secret_guard.py            on any message: stop a key or token before it reaches Claude
+├─ hooks/env_read_guard.py          before a Bash command: stop one that prints a secret file or key
 ├─ settings.json                    + the hook entries, .env deny rules,
 │                                   attribution off
 └─ lessons.md                       lessons about how Claude works (grows by use)
@@ -134,7 +135,7 @@ mkdir -p ~/.claude/prompts ~/.claude/skills ~/.claude/agents ~/.claude/hooks ~/.
 cp prompts/*.md ~/.claude/prompts/
 cp -r skills/* ~/.claude/skills/
 cp agents/*.md ~/.claude/agents/
-cp hooks/require_tests.py hooks/after_compact.py hooks/gap_question.py hooks/measure_session.py hooks/secret_guard.py ~/.claude/hooks/
+cp hooks/require_tests.py hooks/after_compact.py hooks/gap_question.py hooks/measure_session.py hooks/secret_guard.py hooks/env_read_guard.py ~/.claude/hooks/
 cp measurement/crawl.py ~/.claude/measurement/
 cp -r project-kit ~/.claude/
 touch ~/.claude/lessons.md
@@ -206,7 +207,7 @@ touch ~/.claude/lessons.md
 | `skills/` | task-spec, verify-work, review-work, retro, project-init, parallel-agents |
 | `agents/reviewer.md` | reviewer subagent |
 | `agents/Explore.md` | search subagent on Haiku, overriding the built-in one |
-| `hooks/` | Stop hooks (tests ran, session metrics), SessionStart hook for compaction, UserPromptSubmit hooks for gap questions and for secrets in a message, and their tests |
+| `hooks/` | Stop hooks (tests ran, session metrics), SessionStart hook for compaction, UserPromptSubmit hooks for gap questions and for secrets in a message, a PreToolUse hook for Bash commands that would print a secret, and their tests |
 | `settings.snippet.json` | the hook entries, `.env` deny rules and attribution off, for settings.json |
 | `docs/MECHANISMS.md` | per mechanism: what it enforces, what it does not, tests |
 | `docs/TRACEABILITY.md` | where each idea now lives |

@@ -16,9 +16,10 @@ switched off, and then protects nothing.
 | Stop hook `require_tests.py` | The project's tests ran after the last code edit in the turn | That they passed, or that they test the right thing | **automated**: 22 tests + mutation check |
 | SessionStart hook `after_compact.py` | After a compaction, Claude is told which loaded skills changed on disk and which language the user writes in | That Claude loads them again, or replies in that language | **automated**: 21 tests + 17 mutants; live run below |
 | UserPromptSubmit hook `gap_question.py` | When the user's typed message asks what something is, why, or whether they read it right (or is `??`), Claude is reminded to explain another way and reopen a pick that rested on it | That Claude does it; that the message was a real gap (a status question such as "layout bị dính ah?", is the layout overlapping?, still fires); the check before Claude asks for a decision | **automated**: 18 tests + 35 mutants; live run below |
-| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value) is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; secrets in files Claude reads | 18 automated + live, below |
+| UserPromptSubmit hook `secret_guard.py` | A message holding a certain secret (a GitHub, Anthropic or AWS key, a private key, a JWT, a credential header or session cookie with a real-looking value), in its text or in a text file it `@`-mentions, is stopped before it reaches Claude; with gitleaks installed, its other findings warn | That the secret stays off the disk (the transcript may still hold the message); secrets of other forms without gitleaks; past the first 1 MB of a mentioned file; secrets in images, or in files Claude reads | 27 automated + live, below |
 | Subagent `reviewer` | The reviewer's context holds none of the writer's reasoning, and it has no edit tools | That it finds the right problems; Bash can still write files, so "do not modify" is an instruction, not a guarantee | manual, below |
-| Deny rules for `.env*` | Claude's file tools and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files under the working directory | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder | manual, below |
+| Deny rules for secret files | Claude's file tools, `@` mentions and the Bash file commands it recognises (`cat`, `head`, `sed`…) cannot read `.env` files and key files under the working directory, nor the credential files in the home folder (`~/.aws/credentials`, SSH private keys…) | `grep -r` from the folder, or a script that opens the file itself; `.env` files in a parent folder; a credential file the list does not name | manual + live, below |
+| PreToolUse hook `env_read_guard.py` | A Bash command that names a file a `Read(...)` deny rule protects (`grep KEY .env`, `python3 -c "open('.env')"`), prints every environment variable, or prints one whose name marks it as a secret, is denied before it runs | A command that reads without naming the file (`grep -r`), a script that opens the file or prints the environment itself; a file named only in prose is let through on purpose | **automated**: 17 tests + 32 mutants; live run below |
 
 ---
 
@@ -164,20 +165,42 @@ Remove the seeded bugs afterwards (`git checkout` the branch).
 
 **Install.** Merge the `permissions` block of `settings.snippet.json` into
 `~/.claude/settings.json`, keeping any rules you already have. Run
-`/permissions` to confirm the three rules are listed.
+`/permissions` to confirm the rules are listed.
 
-**Enforces.** A bare file name matches at any depth under the current
-directory, so `Read(.env)` and `Read(.env.*)` stop Claude reading `.env`,
-`.env.local`, `packages/api/.env` and the like. The rules cover Claude's own
-file tools and the file commands Claude Code recognises in Bash, such as
-`cat`, `head`, `tail`, `sed` and redirections. `Read(!.env.example)` keeps
-the committed example readable, because it holds variable names, not values
+**Enforces.** The list names only files that are certainly secrets and that
+Claude does not need to read to do its work:
+- **In the project, at any depth** (a bare file name matches at any depth
+  under the current directory): `.env`, `.env.*`, `.envrc`, and key files
+  (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`).
+  `.env.example`, `.env.sample` and `.env.template` stay readable: they hold
+  variable names, not values.
+- **In the home folder:** SSH private keys by name (`~/.ssh/id_rsa`,
+  `id_ed25519` and the other kinds), `~/.aws/credentials`, `~/.netrc`,
+  `~/.git-credentials`, `~/.npmrc`, `~/.pypirc`, `~/.docker/config.json`,
+  `~/.kube/config` and `~/.config/gh/hosts.yml`.
+
+The rules cover Claude's own file tools (Read, Grep, Glob), files the user
+`@`-mentions, and the file commands Claude Code recognises in Bash, such as
+`cat`, `head`, `tail`, `sed` and redirections
 ([permissions docs](https://code.claude.com/docs/en/permissions#read-and-edit)).
+The SSH keys are listed by name rather than as `~/.ssh/id_*`, because a `!`
+carve-out is read relative to the current directory and cannot reopen
+`~/.ssh/id_ed25519.pub` under a `~/` rule.
 
-**Does not enforce.** A command that reads without naming the file
-(`grep -r TOKEN .` from the folder), a Python or Node script that opens the
-file itself, and `.env` files above the working directory. Blocking those
-takes the OS sandbox (`/sandbox`), not a permission rule.
+**Files that only sometimes hold a secret are yours to add**, in the same
+syntax: shell profiles (`Read(~/.zshrc)`, `Read(~/.zprofile)`), where keys
+are often exported, or `Read(**/*.properties)` in a Java project. They are
+not in the default list because Claude reads them for ordinary work
+(`application.properties`, a PATH problem), and a guard that blocks ordinary
+work gets switched off. The Bash hook `env_read_guard.py` (section 4b)
+reads this same list, so one rule covers both.
+
+**Does not enforce.** A command that hands the file to a program Claude Code
+does not recognise (`grep KEY .env`, `python3 -c "open('.env')"`): the Bash
+hook in section 4b catches those. A command that reads without naming the
+file (`grep -r TOKEN .` from the folder), a Python or Node script that opens
+the file itself, and `.env` files above the working directory: blocking those
+takes the OS sandbox (section 4b), not a permission rule.
 
 **Negative test** (must block):
 1. In a scratch folder: `echo 'API_KEY=secret123' > .env`.
@@ -197,6 +220,139 @@ with the rules, the Read tool was refused on both secret files and
 printed both secrets, so the refusals came from these rules. Not checked:
 the rules in `~/.claude/settings.json` rather than `--settings`, and the
 interactive session.
+
+**Checked** again on 15 Nov 2026 with the full list, headless, in a scratch
+folder holding a fake `.env`, `.env.sample` and `certs/server.pem`, plus a
+fake file in the home folder under a `~/` rule built the same way as the
+credential rules: the Read tool was refused on `.env`, on `certs/server.pem`
+(a bare `*.pem` matching one folder down) and on the home file; `cat` of all
+three was refused; `.env.sample` was read. None of the fake values appeared
+in the output. Without the new rules, the same Read printed both
+`certs/server.pem` and the home file, so the refusals came from them. The
+real home files were not used, so that a rule that failed could not show a
+real key.
+
+---
+
+## 4b. PreToolUse hook → a Bash command does not print a protected file or a key
+
+**Install.** Copy `hooks/env_read_guard.py` to `~/.claude/hooks/` and merge
+the `PreToolUse` entry of `settings.snippet.json` into
+`~/.claude/settings.json`.
+
+**Enforces.** Before a Bash command runs, the hook denies it when it:
+- **names a file a `Read(...)` deny rule protects**, in a way Claude Code's
+  own check misses: `grep API_KEY .env`, `awk -F= '{print $2}' ~/.zshrc`,
+  `python3 -c "print(open('.env').read())"`, `$(cat .env)` inside another
+  command, a glob such as `cat .env*`, a heredoc of code fed to an
+  interpreter, `curl -d @.env` (which sends it out), or `cat credentials`
+  after a `cd ~/.aws` earlier in the same command. The code of `bash -c`,
+  `sh -c` and `zsh -c` is checked as a command of its own, for files and for
+  the environment alike. The rules are read from `~/.claude/settings.json`
+  and the project's `.claude/settings.json` and `.claude/settings.local.json`,
+  with Claude Code's anchors and carve-outs, so the list is kept in one place
+  (section 4). A bare name (`.env`, `*.pem`) counts anywhere on the machine;
+- **prints every environment variable**: `printenv`, `env`, `export`,
+  `export -p`, `declare -x` or `set`, alone or piped. Keys exported by a shell
+  profile live there;
+- **prints a variable whose name marks it as a secret**: `echo $GITHUB_TOKEN`,
+  `printenv AWS_SECRET_ACCESS_KEY`, `echo "${!API_KEY}"`, where a part of the
+  name between underscores is KEY, TOKEN, SECRET, PASSWORD, PASSWD, PASS,
+  CREDENTIAL, CREDS, AUTH or PRIVATE, or one of APIKEY, ACCESSKEY, SECRETKEY,
+  PRIVATEKEY, ACCESSTOKEN, AUTHTOKEN. A name whose last part says it is about
+  the secret rather than the secret (`API_KEY_ID`, `SSH_AUTH_SOCK`,
+  `GITHUB_TOKEN_FILE`: ID, FILE, PATH, URL, PORT, SOCK, HOST, USER, NAME, DIR,
+  TYPE, REGION, ENDPOINT) passes, and so does `$MONKEY`.
+
+Claude sees why, with the rule and the file it came from:
+"env_read_guard stopped this command: it names .env, which the rule
+Read(.env) in ~/.claude/settings.json protects, so the file's contents would
+reach the model. Work from an example file (such as .env.example) or ask the
+user for the names you need."
+
+It lets through a command that uses, loads, checks, moves or deletes a
+protected file without printing it: `source .env`, `ls -la .env`,
+`test -f .env`, `rm`, `>> .env`; `ssh -i ~/.ssh/id_ed25519`, `scp`,
+`ssh-add`, `ssh-keygen`; `git add`, `rm`, `mv`, `checkout`, `restore`,
+`reset`, `commit`, `status`, `ls-files` and `check-ignore` (but not
+`git diff .env` or `git show HEAD:.env`, which print it); `cp`/`mv` to a name
+that is protected too (`mv .env.bak .env`; `mv .env /tmp/x` is denied); the
+value of `--env-file`, `--kubeconfig`, `--cacert`, `--capath`, `--cert`,
+`--key` and `--netrc-file`; and the program being run (`.env/bin/python`,
+where `.env` is a virtualenv). It also lets through a secret variable used
+rather than printed (`curl -H "api-key: $KEY"`), and a file named only in
+prose: a commit message, a PR title, an echoed sentence, a heredoc of text. A
+guard that blocked those would block ordinary work and be switched off.
+
+**Does not enforce.**
+- A command that reads without naming the file (`grep -r TOKEN .`), and a
+  script file that opens it itself (`python3 load.py`).
+- A script that prints the environment (`node -e "console.log(process.env)"`,
+  `python3 -c "import os; print(os.environ)"`), and a secret kept in a
+  variable with an ordinary name.
+- A path with a space in it, which reads as prose.
+
+It denies on purpose, at the cost of some ordinary work: `openssl` on a
+protected file, because `openssl rsa -in key.pem -text` prints a private
+key, so `openssl x509 -in cert.pem -text` on a public certificate is denied
+too; and a command that names a file inside a folder that a bare rule
+matches (`cat .env/pyvenv.cfg` in a virtualenv named `.env`), as Claude
+Code's own Read rule does.
+
+The OS sandbox covers the first: with `sandbox.enabled`, Claude Code merges
+the `Read(...)` deny rules into it and enforces them for every Bash command
+and its child processes, scripts included
+([sandboxing docs](https://code.claude.com/docs/en/sandboxing)). It is off
+by default, and turning it on also limits writes and network for every Bash
+command, so try it in one project before turning it on everywhere. Nothing
+here hides the environment from a script.
+
+`CLAUDE_SKIP_ENV_READ_GUARD=1` in the environment turns the hook off. Input it
+cannot read, or an error of its own, lets the command run with a warning that
+it was not checked.
+
+**Automated tests.**
+```bash
+cd hooks && python3 -m unittest test_env_read_guard.py -v
+```
+17 tests, each in a home folder and a project folder of its own, so no real
+settings are read. Two are properties over 150 generated commands each: an
+ordinary chain of commands is never denied, and a reading command naming a
+protected file, behind any prefix, always is. The others: every form above
+denied, every allowed form let through,
+rules from project and local settings, an absolute rule, carve-outs in both
+directions (a `!` listed first carves nothing; a `!` cannot reopen a file
+under a `~/` rule, run from the home folder as in the docs' own example),
+broken settings, broken input, the switch.
+
+Checked the checks: 32 mutants, each removing one rule from a copy of the
+hook. The first run let one survive: a `!` rule reopening a file under a
+`~/` rule, because the test's carve-out could not match from the project
+folder; the case now runs from the home folder. A later run let another
+survive: inline code with spaces in it went unread once `bash -c` code was
+checked as a command of its own, since no other case had spaces; a
+`python3 -c` and a `node -e` case now cover it. 32 of 32 make a test fail.
+
+An independent review (a fresh reviewer, about 190 commands run through the
+hook) found the first version denied `ssh -i`, `ssh-add`, `kubectl
+--kubeconfig`, `curl --cacert`, non-printing `git` subcommands and a
+virtualenv named `.env`; let `bash -c 'env | sort'`, `sh -c 'echo $API_KEY'`,
+`${!API_KEY}`, `curl -d @.env` and `cd ~/.aws && cat credentials` through;
+and took `$MONKEY` and `$SSH_AUTH_SOCK` for secrets. Each became a test,
+seen failing, before the fix.
+
+**Checked** headless on 15 Nov 2026, in a scratch folder holding a fake
+`.env` and `.env.example`, the hook in the project's settings, and the
+environment cleared down to a fake `FAKE_DEMO_TOKEN` so that a failure could
+not print a real key: `grep API_KEY .env`, the `python3 -c` read, `printenv`
+and `echo $FAKE_DEMO_TOKEN` were denied with the reasons above; `echo $HOME`
+and `cat .env.example` ran. None of the fake values appeared in the output.
+After the review fixes, the same way: `bash -c "env | sort"`,
+`curl -d @.env`, `cd .. && cd s2 && grep API_KEY .env` and
+`sh -c "echo $FAKE_DEMO_TOKEN"` were denied; `git status --short .env` and
+`echo $SSH_AUTH_SOCK` ran; no fake value in the output.
+
+**Not yet checked:** the interactive session.
 
 ---
 
@@ -394,7 +550,13 @@ PATH. gitleaks is optional: when it is on PATH (`brew install gitleaks`), it
 adds a second layer.
 
 **Enforces.** Every message, pasted blocks included, is read before it is
-sent. These forms block it:
+sent. A long paste that Claude Code shows as `[Pasted text #N]` reaches the
+hook in full ([hooks docs](https://code.claude.com/docs/en/hooks)). A file the
+message `@`-mentions (`@logs/app.log`) reaches the hook only as its name, and
+Claude Code attaches the content after the hook has run, so the hook opens
+each mentioned text file itself (from the working folder, `~/` or an absolute
+path) and scans it the same way: the first 1 MB, with a note when there was
+more; binary files and folders are skipped. These forms block it:
 - GitHub tokens, Anthropic keys, AWS access key ids, private key blocks and
   JWTs;
 - a credential header (`Authorization`, `X-API-Key`, `X-Auth-Token` and the
@@ -404,7 +566,9 @@ sent. These forms block it:
 - a `Basic` header that decodes to `user:password`.
 
 The block message names each one by line and kind with the middle of the
-value masked (`ghp_Ab…Yz12`), and leaves the message text out of itself
+value masked (`ghp_Ab…Yz12`), and by file for a mentioned file
+(`file logs/app.log, line 42: GitHub token ghp_x8…TpdL`), and leaves the
+message text out of itself
 (`suppressOriginalPrompt`). With gitleaks installed, the message also goes to
 `gitleaks stdin` for at most 2 seconds: a rule for one of the forms above
 blocks, and any other rule (such as `generic-api-key`) only warns. When
@@ -424,19 +588,30 @@ not scanned.
   off the machine: rotate a key that was pasted.
 - **Secrets of other forms.** A password in prose, or a provider key with no
   fixed prefix, is caught only by gitleaks, and then only as a warning.
-- **Secrets in images or attached files**, or in files and command output
-  Claude reads (section 4 and review cover those).
+- **Secrets in images**, past the first 1 MB of a mentioned file, in a file
+  attached without its name in the message text (if a client attaches files
+  that way), or in files and command output Claude reads (sections 4 and 4b,
+  and review, cover those).
 
 **Automated tests.**
 ```bash
 cd hooks && python3 -m unittest test_secret_guard.py -v
 ```
-18 tests. Every key is fake and built at run time, so the test file holds
+27 tests. Every key is fake and built at run time, so the test file holds
 nothing a scanner takes for a key.
 - **Blocks:** each of the six key kinds; a key inside a pasted block (named by
-  its line); five header forms (a curl bearer token, a raw `x-api-key` line,
-  a long and a short `Basic` value, a session cookie, a header in code); the
-  masked value shown; every secret of a message listed.
+  its line), also on line 152 of a 200-line paste; five header forms (a curl
+  bearer token, a raw `x-api-key` line, a long and a short `Basic` value, a
+  session cookie, a header in code); the masked value shown; every secret of a
+  message listed.
+- **Mentioned files:** a key on line 120 of `@logs/app.log` blocks, naming the
+  file and the line; a mention at the end of a sentence (`@logs/app.log.`), from
+  `~/` and by absolute path; every mentioned file scanned, one named twice
+  listed once; a clean file, a name that is no file, a folder, a binary file,
+  an email address and `@property` pass silently; a key past the first 1 MB
+  is not seen and the note says so, a key in the first line blocks;
+  `[secret-ok]` sends the file too; a gitleaks finding in a file names the
+  file and its own line.
 - **Passes silently:** 17 ordinary messages, among them a sentence about a
   token's format, AWS's sample key, a PEM header line with no key,
   placeholders with and without digits, a dummy value, a harmless cookie, a
@@ -464,6 +639,16 @@ blocked, line numbers off by one). The first run let one survive: the dummy
 value `xxxx…` was already a placeholder, so the distinct-character rule was
 never exercised; a case now covers it. 18 of 18 make a test fail.
 
+The mentioned-file part, 15 Nov 2026: 12 mutants (no trailing punctuation
+stripped, no `~/`, binary files scanned, no note past 1 MB, only the first
+mention, files not scanned, the file not named, gitleaks lines not mapped
+back to the file, an `@` inside a word counted, one file listed twice, and two
+that lift the 1 MB limit). The first run let four survive; two cases (an email
+address beside a file of that name, a file mentioned twice) now kill two of
+them. The two that remain lift the limit in one place only: it is applied
+when the file is read and again when it is scanned, so either one alone keeps
+the result. 10 of 12 make a test fail.
+
 **Checked** with Claude Code 2.1.261, headless (`claude -p --settings`
 holding only this hook):
 - **A fake GitHub token:** blocked with 0 model turns and no cost. The result
@@ -473,6 +658,10 @@ holding only this hook):
   holds the warning as a `hook_system_message` attachment.
 - **`API_SECRET=<40 random characters>`:** gitleaks' `generic-api-key` sent
   the message with a `hook_system_message` warning naming line 1.
+- **`@logs/app.log why do requests fail?`**, with a fake GitHub token on line
+  42 of a 79-line log (15 Nov 2026): blocked with 0 model turns and no cost,
+  showing `file logs/app.log, line 42: GitHub token ghp_x8…TpdL`; the full
+  token was nowhere in the output.
 
 **Checked** in an interactive session (14 Nov 2026), with a fake token typed
 into the prompt:
@@ -488,7 +677,9 @@ into the prompt:
 
 **Not yet checked:** how a warning (`[secret-ok]`, a generic gitleaks
 finding, "could not scan") looks in the interactive session, and whether the
-interactive prompt history keeps a blocked message.
+interactive prompt history keeps a blocked message. In the VS Code extension:
+whether a long paste reaches the hook in full, and whether the attach button
+writes the file's `@` name into the message, so that the hook can see it.
 
 ---
 
